@@ -1,0 +1,226 @@
+/* Navbar.css */
+
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 70px;
+  background-color: black;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: white;
+  z-index: 1000;
+  transition: transform 0.3s ease-in-out, left 0.3s ease, width 0.3s ease;
+  transform: translateY(0);
+  box-shadow: none;
+  border-bottom: none;
+}
+
+.navbar-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  position: relative;
+}
+
+.logo-link {
+  color: white;
+  text-decoration: none;
+  font-size: 1.5rem;
+  font-weight: bold;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.logo-left {
+  left: 20px;
+  transform: translateX(0);
+  position: relative;
+}
+
+.links {
+  display: flex;
+  gap: 1rem;
+  margin-left: auto;
+  align-items: center;
+}
+
+.nav-link,
+.login-link,
+.register-link {
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+  font-size: 1.2rem;
+  transition: all 0.3s ease;
+}
+
+.nav-link:hover,
+.login-link:hover,
+.register-link:hover {
+  color: #5553eaa3;
+  transform: scale(1.1);
+}
+
+.sidebar-toggle {
+  font-size: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  margin-left: 20px;
+  z-index: 9999;
+  position: relative;
+  padding: 0;
+}
+
+.sidebar-toggle:focus {
+  outline: none;
+}
+
+.navbar.sidebar-open {
+  margin-left: 220px;
+  width: calc(100% - 220px);
+  transition: margin-left 0.3s ease, width 0.3s ease;
+}
+
+.navbar.auth-navbar {
+  margin-left: 0 !important;
+}
+
+.auth-navbar .navbar-inner {
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 20px; /* opzionale, per non far toccare il bordo */
+}
+
+.hidden-navbar {
+  transform: translateY(-100%);
+}
+
+@media screen and (max-width: 768px) {
+  .navbar {
+    justify-content: space-between;
+    padding: 0 1rem;
+    left: 0 !important;
+  }
+
+  .logo-link,
+  .logo-left {
+    position: static;
+    transform: none;
+    margin-right: auto;
+  }
+
+  .links {
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-left: 0;
+  }
+
+  .navbar.sidebar-open {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+/* Dropdown profilo */
+
+  .profile-dropdown-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+
+  .profile-dropdown {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    z-index: 1000;
+  }
+
+  .profile-dropdown img {
+    pointer-events: auto;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid white;
+  }
+
+  .profile-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: white;
+  }
+
+  /* Dropmenu vero e proprio */
+  .profile-dropdown-content {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background-color: #111;
+    color: white;
+    min-width: 180px;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    flex-direction: column;
+    z-index: 1100;
+    animation: fadeIn 0.2s ease-in-out;
+  }
+
+  .profile-dropdown-content.open {
+    display: flex;
+  }
+
+  .profile-dropdown-content a {
+    padding: 5px 0;
+    color: white;
+    text-decoration: none;
+  }
+
+  .profile-dropdown-content a:hover {
+    color: #aaaaff;
+  }
+
+  .profile-dropdown-content hr {
+    margin: 10px 0;
+    border: 0;
+    border-top: 1px solid #333;
+  }
+
+  .profile-dropdown-content button {
+    background-color: transparent;
+    border: none;
+    color: red;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 5px 0;
+    width: 100%;
+    text-align: left;
+  }
+
+  .profile-dropdown-content button:hover {
+    color: #ff4c4c;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+  }

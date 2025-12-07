@@ -1,0 +1,13 @@
+/* src/pages/ThankYouPage.css */
+.thank-you-container {
+    text-align: center;
+    padding: 50px;
+    background-color: #f9f9f9;
+  }
+  
+  .thank-you-message {
+    font-size: 24px;
+    font-weight: bold;
+    color: #4CAF50;
+  }
+  

@@ -1,0 +1,63 @@
+.settings-container {
+  width: calc(100vw - 220px);
+  height: calc(100vh - 80px);
+  margin: 0;             /* niente margini esterni */
+  padding: 20px;
+  background: linear-gradient(135deg, #6b73ff 0%, #000dff 100%);
+  border-radius: 15px;
+  color: #fff;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  box-shadow: 0 8px 25px rgba(0, 13, 255, 0.4);
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 40px;
+  font-size: 2.8rem;
+  font-weight: 700;
+  user-select: none;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  justify-content: center;
+  margin-bottom: 30px;
+}
+
+.tabs button {
+  background-color: #fff;
+  color: #000dff;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  box-shadow: 0 4px 12px rgba(107, 115, 255, 0.4);
+}
+
+.tabs button:hover {
+  background-color: #e0e0ff;
+}
+
+.tabs button.active {
+  background-color: #4c55e8;
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(0, 0, 255, 0.7);
+}
+
+.tab-content {
+  background-color: #1a1aff22; /* leggero trasparente sul blu */
+  border-radius: 15px;
+  padding: 30px 25px;
+  min-height: 300px;
+  box-shadow: 0 8px 25px rgba(0, 0, 255, 0.3);
+  color: #e3e3ffcc;
+  font-size: 1.1rem;
+  font-weight: 600;
+  user-select: none;
+}

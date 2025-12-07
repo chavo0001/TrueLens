@@ -1,0 +1,113 @@
+/* Overlay blur che copre tutto quando search è attiva */
+.overlay-blur {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  backdrop-filter: blur(6px);
+  background: rgba(255, 255, 255, 0.3);
+  z-index: 9998;
+}
+
+/* Container ricerca normale */
+.search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  z-index: auto;
+  transition: all 0.3s ease;
+}
+
+/* Stato focused: barra fissa, centrata e più larga */
+.search-container.focused {
+  position: fixed;
+  top: 20vh;
+  left: 25%;
+  width: 50vw;
+  max-width: 700px;
+  background: white;
+  padding: 10px 20px;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+}
+
+/* Input base */
+.searchInput {
+  box-sizing: border-box;
+  width: 100%;
+  border-radius: 8px;
+  border: 2px solid transparent; /* bordo trasparente di default */;
+  outline: none;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.searchInput:focus {
+  border-color: #4e8df5;
+}
+
+/* Nella barra focused input più grande */
+.search-container.focused .searchInput {
+  font-size: 20px;
+  padding: 15px 20px;
+  box-sizing: border-box;
+}
+
+/* Pulsante clear */
+.clearButton {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #888;
+  transition: color 0.2s ease;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.clearButton:hover {
+  color: #333;
+}
+
+/* Dropdown risultati ricerca (posizionati sotto la barra centrale quando focused) */
+.searchResults {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  background-color: white;
+  border: 1px solid #ccc;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  z-index: 10000;
+}
+
+/* Item singolo risultato */
+.resultItem {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.resultItem:hover {
+  background-color: #f0f0f0;
+}
+
+.resultAvatar {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 50%;
+  margin-right: 10px;
+}
