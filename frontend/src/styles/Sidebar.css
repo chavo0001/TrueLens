@@ -1,0 +1,219 @@
+/* SIDEBAR PRINCIPALE */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 220px;
+  height: 100vh;
+  background: linear-gradient(180deg, #4b4fe1, #2a2d8f);
+  color: #e3e3ffcc;
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 2000;
+  padding-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 4px 0 18px rgba(75, 79, 225, 0.7);
+  border-right: none;
+  border-radius: 0;
+  transition: width 0.3s ease;
+}
+
+/* Quando la sidebar è "chiusa", lascia il lembo visibile (22px),
+   nasconde il contenuto con opacity e disabilita interazioni */
+.sidebar.closed {
+  width: 22px !important;
+  padding: 1.5rem 0 !important;
+  overflow: hidden !important;
+  pointer-events: auto; /* permetti il lembo di essere cliccabile */
+}
+
+.sidebar.closed a,
+.sidebar.closed .logo,
+.sidebar.closed hr {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.sidebar a,
+.sidebar .logo,
+.sidebar hr {
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 0.3s ease;
+}
+
+.sidebar-container {
+  position: relative;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 220px;
+  z-index: 2000;
+  pointer-events: none;
+}
+
+.sidebar::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100vh;
+  background: linear-gradient(to bottom, #6b73ff, #2a2d8f);
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
+  z-index: 2500;
+}
+
+/* ---------- TOGGLE BUTTON (sidebar aperta) --------------------------- */
+.toggle-button {
+  left:10px; /* Posiziona il toggle esattamente al bordo della sidebar aperta */
+  width: 26px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  background: linear-gradient(180deg, #6b73ff, #2a2d8f); /* stesso del lembo */
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 10px 12px;
+  font-size: 24px;
+  z-index: 3600;
+  border-radius: 0 10px 10px 0;
+  transition: background-color 0.3s, transform 0.2s, left 0.3s, right 0.3s;
+  box-shadow: inset -1px 0 3px rgba(0, 0, 0, 0.15);
+}
+
+.sidebar + .toggle-button {
+  left: 206px; /* al bordo del lembo */
+  top: 50%;
+  transform: translateY(-50%);
+  background: linear-gradient(180deg, #4b4fe1, #2a2d8f); /* stesso della sidebar */
+  color: #fff;
+  border: 2px solid #b2b2ff;
+  padding: 10px 12px;
+  font-size: 24px;
+  border-radius: 0 10px 10px 0;
+  z-index: 4000;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.2s;
+}
+
+.sidebar-container.closed .toggle-button {
+  left: 5px !important;
+  right: auto !important;
+  border-radius: 10px 0 0 10px;
+  transform: translateY(-50%);
+}
+
+.toggle-button:hover {
+  background: linear-gradient(135deg, #4c55e8, #000bbf);
+  transform: translateY(-50%) scale(1.1);
+}
+
+
+/* Logo */
+.sidebar .logo {
+  font-size: 1.8rem;
+  font-weight: 700;
+  padding: 0 24px 24px;
+  margin-bottom: 1.2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  user-select: none;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* Link di Navigazione */
+.sidebar a {
+  display: block;
+  padding: 14px 24px;
+  text-decoration: none;
+  color: #e3e3ffcc;
+  font-size: 1.1rem;
+  font-weight: 600;
+  transition: background 0.25s ease, padding-left 0.25s ease, color 0.3s ease;
+  border-radius: 8px;
+  user-select: none;
+}
+
+.sidebar a:hover {
+  background-color: rgba(107, 115, 255, 0.25);
+  padding-left: 32px;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(107, 115, 255, 0.5);
+}
+
+/* Link attivo */
+.sidebar .active,
+.navbar-link.active {
+  background-color: #4c55e8;
+  color: #fff;
+  border-left: 5px solid #e63946;
+  box-shadow: 0 0 12px rgba(230, 57, 70, 0.7);
+}
+
+/* Divisori */
+.sidebar hr {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  margin: 1.5rem 0;
+}
+
+/* Scrollbar Custom */
+.sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background-color: rgba(107, 115, 255, 0.3);
+  border-radius: 4px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(107, 115, 255, 0.6);
+}
+
+/* Contenuto principale */
+.main-content {
+  margin-left: 220px;
+  padding-top: 70px;
+  transition: margin-left 0.3s ease;
+}
+
+/* Hover effetti */
+.sidebar-item:hover {
+  background: rgba(107, 115, 255, 0.15);
+  padding-left: 28px;
+  transition: padding-left 0.25s ease;
+}
+
+.sidebar-icon {
+  font-size: 18px;
+  color: #c3c3ffcc;
+}
+/* ---------- LEMBO (sidebar chiusa) --------------------------- */
+.sidebar-lembo {
+  position: fixed;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 100px;                          /* altezza maniglia */
+  background: linear-gradient(180deg, #6b73ff, #2a2d8f);
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+  box-shadow: 2px 0 6px rgba(0,0,0,0.35);
+  cursor: pointer;
+  z-index: 4500;
+  transition: background 0.25s ease;
+}
+
+.sidebar-lembo:hover {
+  background: linear-gradient(180deg, #4c55e8, #1f248f);
+}

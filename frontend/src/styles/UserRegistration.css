@@ -1,0 +1,80 @@
+/* Modifica lo stile della pagina di login */
+.registration-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f4f4f4; /* Colore di sfondo chiaro */
+}
+
+.left-side {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+  padding: 20px;
+  text-align: center;
+}
+
+.left-side h1 {
+  font-size: 3rem;
+  color: #fb1919;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+}
+
+.left-side p {
+  font-size: 1.2rem;
+  color: #555;
+  font-family: 'Poppins', sans-serif;
+  margin-top: 10px;
+}
+
+.right-side {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+  padding: 20px; /* Mantieni il padding originale */
+}
+
+form {
+  width: 100%;
+  max-width: 500px; /* Aumentato il max-width per ingrandire il riquadro */
+  padding: 30px; /* Aggiunto più padding per far respirare gli elementi */
+  background-color: #fff;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+form input {
+  width: 100%; /* Impostato per avere la stessa larghezza del pulsante */
+  padding: 12px; /* Aumentato padding per gli input */
+  margin-bottom: 15px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-family: 'Poppins', sans-serif;
+}
+
+form button {
+  width: 100%; /* Impostato per avere la stessa larghezza degli input */
+  padding: 12px;
+  border-radius: 8px;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 1;
+}
+
+form button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+form .error {
+  color: red;
+  font-family: 'Poppins', sans-serif;
+  margin-bottom: 15px;
+}
