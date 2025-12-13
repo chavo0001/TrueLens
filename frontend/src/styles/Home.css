@@ -17,7 +17,11 @@ body {
   max-width: 100%;
 }
 
-.creator-card {
+/* =========================
+   PHOTO TILE (ex card) - stessi effetti/overlay
+========================= */
+
+.photo-tile {
   position: relative;
   border-radius: 16px;
   overflow: hidden;
@@ -31,12 +35,12 @@ body {
   justify-content: flex-end;
 }
 
-.creator-card:hover {
+.photo-tile:hover {
   transform: scale(1.03);
   box-shadow: 0 6px 30px rgba(0,123,255,0.4);
 }
 
-.creator-image {
+.photo-tile img {
   position: absolute;
   top: 0;
   left: 0;
@@ -45,14 +49,15 @@ body {
   object-fit: cover;
   z-index: 0;
   transition: opacity 0.3s ease;
+  display: block;
 }
 
-.creator-card:hover .creator-image {
+.photo-tile:hover img {
   opacity: 0.9;
 }
 
-/* Overlay nome creator */
-.creator-name-overlay {
+/* Overlay nome utente */
+.photo-meta {
   position: relative;
   z-index: 1;
   background: rgba(0, 0, 0, 0.55);
@@ -66,7 +71,7 @@ body {
   backdrop-filter: blur(6px);
 }
 
-/* Pulsanti dentro card (es. like o sub) */
+/* Pulsanti dentro tile (es. like o sub) */
 .card-actions {
   display: flex;
   justify-content: space-between;
@@ -75,6 +80,7 @@ body {
   font-size: 0.9rem;
   color: #eee;
 }
+
 /* Dropdown items */
 .dropdown-item {
   padding: 8px 15px;
@@ -107,7 +113,7 @@ body {
   transform: scale(1.02);
 }
 
-/* Pulsante creator */
+/* Pulsante (lasciato invariato) */
 .creatorButton {
   max-width: 250px;
   width: fit-content;
@@ -128,12 +134,25 @@ body {
   box-shadow: 0 4px 12px rgba(0,86,179,0.7);
 }
 
-/* Griglia creator */
-.creator-grid {
+/* =========================
+   PHOTO GRID (nuova griglia)
+========================= */
+
+.photo-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 20px;
-  padding: 20px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  padding: 16px 0 40px;
+}
+
+@media (max-width: 1200px) {
+  .photo-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 800px) {
+  .photo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 480px) {
+  .photo-grid { grid-template-columns: 1fr; }
 }
 
 /* Spaziatura dopo navbar */
@@ -172,7 +191,6 @@ body {
 .horizontal-scroll::-webkit-scrollbar {
   display: none; /* Chrome */
 }
-
 
 /* Link e testi secondari */
 a, .secondary-text {

@@ -156,15 +156,17 @@ const uploadAvatar = multer({
   },
 });
 
+const uploadsDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
 // Per l'upload del portfolio (massimo 40 immmagini)
 const portfolioStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
+  destination: (req, file, cb) => cb(null, path.join(__dirname, "uploads")),
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname || "").toLowerCase();
-    cb(
-      null,
-      `portfolio-${Date.now()}-${Math.random().toString(16).slice(2)}${ext || ".jpg"}`
-    );
+     const ext = path.extname(file.originalname);
+    cb(null, `portfolio-${Date.now()}-${uuidv4()}${ext}`);
   },
 });
 const uploadPortfolio = multer({
@@ -264,7 +266,7 @@ app.get("/api/confirm-email", async (req, res) => {
   }
 });
 
-// Login (una sola tipologia: user) => crea sessioni cookie connect.sid
+// Login => crea sessioni cookie connect.sid
 app.post("/api/login", async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ message: "Email e password sono obbligatori" });
@@ -387,6 +389,38 @@ app.get("/api/me/photos", requireSession, async (req, res) => {
   } catch (err) {
     console.error("Errore get portfolio:", err);
     res.status(500).json({ error: "Server error", detail: err.message });
+  }
+});
+
+/* ================================
+   10.2) EXPLORE (foto di tutti gli utenti)
+   ================================ */
+
+app.get("/api/explore/photos", async (req, res) => {
+  try {
+    const limit = Math.min(Number(req.query.limit) || 60, 200);
+    const offset = Math.max(Number(req.query.offset) || 0, 0);
+
+    const r = await pool.query(
+      `
+      SELECT 
+        ui.id,
+        ui.file_path,
+        ui.created_at,
+        u.id AS user_id,
+        u.username
+      FROM user_images ui
+      JOIN users u ON u.id = ui.user_id
+      ORDER BY ui.created_at DESC
+      LIMIT $1 OFFSET $2
+      `,
+      [limit, offset]
+    );
+
+    res.json({ photos: r.rows, limit, offset });
+  } catch (err) {
+    console.error("Errore explore/photos:", err);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -523,7 +557,7 @@ if (fs.existsSync(buildIndex)) {
 }
 
 /* ================================
-   14) ERROR HANDLER (LAST)
+   14) ERROR HANDLER 
    ================================ */
 app.use((err, req, res, next) => {
   console.error("Unhandled error:", err);
