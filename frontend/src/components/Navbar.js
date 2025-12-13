@@ -106,17 +106,7 @@ const Navbar = ({ isSidebarOpen, toggleSidebar }) => {
 
                 {profileOpen && (
                   <div className="profile-dropdown-content">
-                    <Link to="/gestisci-profilo" onClick={() => setProfileOpen(false)}>
-                      Gestisci profilo
-                    </Link>
-                    <Link to="/impostazioni" onClick={() => setProfileOpen(false)}>
-                      Impostazioni
-                    </Link>
-
-                    <label className="avatar-upload">
-                      Cambia immagine profilo
-                      <input type="file" accept="image/*" onChange={handleImageChange} hidden />
-                    </label>
+                  
 
                     <hr />
                     <button onClick={logout}>Logout</button>

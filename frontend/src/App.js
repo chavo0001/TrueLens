@@ -4,7 +4,6 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from "react-route
 
 import Layout from "./components/Layout";
 import Navbar from "./components/Navbar";
-import ProfileSettings from "./pages/ProfileSettings";
 import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
 import CreatorRegistration from "./pages/CreatorRegistration";
@@ -12,7 +11,6 @@ import UserRegistration from "./pages/UserRegistration";
 import Login from "./pages/Login";
 import LoadingScreen from "./components/LoadingScreen";
 import ThankYouPage from "./pages/ThankYouPage";
-import Settings from "./pages/Settings";
 import RedirectingPage from "./pages/RedirectingPage";
 import { UserProvider, UserContext } from "./data/UserContext";
 
@@ -62,8 +60,6 @@ function AppContent() {
           }
         >
           <Route index element={<Home />} />
-          <Route path="impostazioni" element={<Settings />} />
-          <Route path="/gestisci-profilo" element={<ProfileSettings />} />
           <Route path="thankyou" element={<ThankYouPage />} />
           <Route path="*" element={<NotFound />} />
         </Route>

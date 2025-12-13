@@ -87,7 +87,7 @@ const HomePage = () => {
         ) : (
           <div className="photo-grid">
             {filteredPhotos.map((p) => (
-              <div className="photo-tile" key={p.id}>
+              <div className="photo-tile" key={p.id} onClick={() => navigate(`/user/${p.user_id}`)}>
                 <img
                   src={`http://localhost:5001${p.file_path}`}
                   alt={p.username || "photo"}
