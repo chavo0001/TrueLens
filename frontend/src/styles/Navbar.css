@@ -140,87 +140,94 @@
 
 /* Dropdown profilo */
 
-  .profile-dropdown-wrapper {
-    position: relative;
-    display: inline-block;
-  }
+.profile-dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+}
 
-  .profile-dropdown {
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    z-index: 1000;
-  }
+.profile-dropdown {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 1000;
+}
 
-  .profile-dropdown img {
-    pointer-events: auto;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid white;
-  }
+.profile-dropdown img {
+  pointer-events: auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid white;
+}
 
-  .profile-name {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    color: white;
-  }
+.profile-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: white;
+}
 
-  /* Dropmenu vero e proprio */
-  .profile-dropdown-content {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    background-color: #111;
-    color: white;
-    min-width: 180px;
-    padding: 10px;
-    border-radius: 5px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.5);
-    flex-direction: column;
-    z-index: 1100;
-    animation: fadeIn 0.2s ease-in-out;
-  }
+/* Dropmenu vero e proprio */
+.profile-dropdown-content {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: #111;
+  color: white;
+  min-width: 180px;
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  display: none;
+  flex-direction: column;
+  z-index: 1100;
+  animation: fadeIn 0.2s ease-in-out;
+}
 
-  .profile-dropdown-content.open {
-    display: flex;
-  }
+.profile-dropdown-content.open {
+  display: flex;
+}
 
-  .profile-dropdown-content a {
-    padding: 5px 0;
-    color: white;
-    text-decoration: none;
-  }
+.profile-dropdown-content hr {
+  margin: 10px 0;
+  border: 0;
+  border-top: 1px solid #333;
+}
 
-  .profile-dropdown-content a:hover {
-    color: #aaaaff;
-  }
+/* Bottoni dropdown (default “neutro”) */
+.profile-dropdown-content .dropdown-item {
+  background: transparent;
+  border: none;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 8px 6px;
+  width: 100%;
+  text-align: left;
+}
 
-  .profile-dropdown-content hr {
-    margin: 10px 0;
-    border: 0;
-    border-top: 1px solid #333;
-  }
+.profile-dropdown-content .dropdown-item:hover {
+  color: #aaaaff;
+}
 
-  .profile-dropdown-content button {
-    background-color: transparent;
-    border: none;
-    color: red;
-    font-weight: bold;
-    cursor: pointer;
-    padding: 5px 0;
-    width: 100%;
-    text-align: left;
-  }
+/* Logout rosso */
+.profile-dropdown-content .dropdown-logout {
+  color: #ff4c4c;
+}
 
-  .profile-dropdown-content button:hover {
-    color: #ff4c4c;
-  }
+.profile-dropdown-content .dropdown-logout:hover {
+  color: #ff7777;
+}
 
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-5px); }
-    to { opacity: 1; transform: translateY(0); }
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
   }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -45,9 +45,6 @@ const HomePage = () => {
 
   const handleClearSearch = () => setSearchQuery("");
 
-  const handleRegistration = () => {
-    navigate("/creator-origin-selection"); // lo rinominiamo dopo
-  };
 
   const filteredPhotos = searchQuery
     ? photos.filter((p) =>
@@ -57,7 +54,16 @@ const HomePage = () => {
 
   return (
     <>
-
+       {/* === ACTION BAR IN ALTO === */}
+    <div className="creatorButtonWrapper">
+      <button
+        onClick={() => navigate("/me")}
+        className="creatorButton"
+      >
+        Add photo
+      </button>
+    </div>
+     
       <div className="page">
         <div className="search-bar-wrapper">
           <SearchBar

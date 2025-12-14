@@ -223,7 +223,18 @@ app.post("/api/register", async (req, res) => {
        VALUES ($1,$2,$3,false,$4)`,
       [email, hashed, username, token]
     );
+console.log("TOKEN GENERATO:", token);
 
+const check = await pool.query(
+  `SELECT id, email, is_verified, confirmation_token
+   FROM users
+   WHERE email = $1
+   ORDER BY created_at DESC
+   LIMIT 1`,
+  [email]
+);
+
+console.log("DB SUBITO DOPO INSERT:", check.rows[0]);
     // Conferma mail
     try {
       const confirmUrl =
@@ -249,6 +260,17 @@ app.post("/api/register", async (req, res) => {
 app.get("/api/confirm-email", async (req, res) => {
   const { token } = req.query;
   if (!token) return res.status(400).send("Token mancante");
+
+console.log("TOKEN RICEVUTO DA LINK:", token);
+
+const before = await pool.query(
+  `SELECT id, email, is_verified, confirmation_token
+   FROM users
+   WHERE confirmation_token = $1`,
+  [token]
+);
+
+console.log("DB PRIMA CONFIRM:", before.rows);
 
   try {
     const r = await pool.query(
@@ -316,6 +338,26 @@ app.post("/api/logout", (req, res) => {
     return res.sendStatus(200);
   });
 });
+
+app.get("/api/me", requireSession, async (req, res) => {
+  try {
+    // req.user arriva da requireSession = req.session.user
+    const userId = req.user.id;
+
+    const r = await pool.query(
+      "SELECT id, email, username FROM users WHERE id=$1",
+      [userId]
+    );
+
+    if (r.rowCount === 0) return res.status(404).json({ message: "User not found" });
+
+    res.json({ user: r.rows[0] });
+  } catch (err) {
+    console.error("Errore /api/me:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 
 /* ================================
    10) PORTFOLIO / UPLOAD (collegato a user)
@@ -389,6 +431,41 @@ app.get("/api/me/photos", requireSession, async (req, res) => {
   } catch (err) {
     console.error("Errore get portfolio:", err);
     res.status(500).json({ error: "Server error", detail: err.message });
+  }
+});
+
+/* ================================
+   10.1) ENDPOINT PROFILO + foto utente
+   ================================ */
+app.get("/api/users/:id", async (req, res) => {
+  try {
+    const userId = Number(req.params.id);
+    if (!userId) return res.status(400).json({ error: "Invalid user id" });
+
+    const userRes = await pool.query(
+      "SELECT id, username FROM users WHERE id=$1",
+      [userId]
+    );
+
+    if (userRes.rowCount === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const photosRes = await pool.query(
+      `SELECT id, user_id, file_path, created_at
+       FROM user_images
+       WHERE user_id=$1
+       ORDER BY created_at DESC`,
+      [userId]
+    );
+
+    res.json({
+      user: userRes.rows[0],
+      photos: photosRes.rows,
+    });
+  } catch (err) {
+    console.error("Errore /api/users/:id:", err);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
