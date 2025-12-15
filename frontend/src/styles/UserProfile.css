@@ -1,0 +1,137 @@
+/* =========================
+   USER PROFILE – PHOTO MENU
+========================= */
+
+.photo-tile {
+  position: relative; /* fondamentale per posizionare i 3 puntini */
+}
+
+/* container dei 3 pallini */
+.photo-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 9999;
+}
+
+/* bottone 3 pallini */
+.photo-dots {
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  padding: 4px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.photo-dots:hover {
+  background: rgba(0, 0, 0, 0.9);
+}
+
+/* dropdown menu */
+/* ====== ANIMAZIONE MENU (fade + slide) ====== */
+
+.photo-menu {
+  position: absolute;
+  top: 36px;
+  right: 0;
+
+  background: #111;
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  min-width: 150px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  z-index: 10000;
+
+  /* ANIMAZIONE */
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
+  transform-origin: top right;
+  animation: photoMenuIn 140ms ease-out forwards;
+  will-change: opacity, transform;
+}
+
+@keyframes photoMenuIn {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.photo-menu-item {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.photo-menu-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.photo-menu-item.danger {
+  color: #ff4c4c;
+}
+
+/* =========================
+   MODAL CONFERMA DELETE
+========================= */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  padding: 16px;
+}
+
+.modal-box {
+  width: min(520px, 100%);
+  background: #111;
+  border: 1px solid #2a2a2a;
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  color: white;
+}
+
+.modal-box h3 {
+  margin: 0 0 14px 0;
+  font-size: 18px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.modal-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: white;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.modal-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.modal-btn.danger {
+  background: rgba(255, 76, 76, 0.15);
+  border-color: rgba(255, 76, 76, 0.35);
+  color: #ff4c4c;
+}

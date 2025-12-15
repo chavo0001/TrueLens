@@ -434,6 +434,45 @@ app.get("/api/me/photos", requireSession, async (req, res) => {
   }
 });
 
+app.delete("/api/me/photos/:photoId", requireSession, async (req, res) => {
+  const userId = req.user.id;
+  const photoId = Number(req.params.photoId);
+
+  if (!photoId) return res.status(400).json({ error: "Invalid photoId" });
+
+  try {
+    const r = await pool.query(
+      "SELECT id, file_path FROM user_images WHERE id=$1 AND user_id=$2",
+      [photoId, userId]
+    );
+
+    if (r.rowCount === 0) {
+      return res.status(404).json({ error: "Photo not found or not yours" });
+    }
+
+    const filePath = r.rows[0].file_path;
+
+    await pool.query("DELETE FROM user_images WHERE id=$1 AND user_id=$2", [
+      photoId,
+      userId,
+    ]);
+
+    const absPath = path.join(
+      process.cwd(),
+      filePath.startsWith("/") ? filePath.slice(1) : filePath
+    );
+
+    fs.unlink(absPath, (err) => {
+      if (err) console.warn("File delete warning:", err.message);
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("DELETE /api/me/photos error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 /* ================================
    10.1) ENDPOINT PROFILO + foto utente
    ================================ */

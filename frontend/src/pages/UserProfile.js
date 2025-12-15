@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "../styles/Home.css";
+import "../styles/UserProfile.css";
 import { apiFetch } from "../api/apiFetch";
 
 const UserProfile = () => {
@@ -8,6 +9,14 @@ const UserProfile = () => {
   const navigate = useNavigate();
 
   const profileUserId = Number(id);
+
+  // menu 3 puntini + modal delete
+  const [menuOpenFor, setMenuOpenFor] = useState(null); // photoId oppure null
+  const [confirmDelete, setConfirmDelete] = useState(null); // photo object oppure null
+  const [deleting, setDeleting] = useState(false);
+
+  // ref per click-outside (menu puntini)
+  const menuRef = useRef(null);
 
   const [user, setUser] = useState(null);
   const [photos, setPhotos] = useState([]);
@@ -48,6 +57,9 @@ const UserProfile = () => {
     }
   };
 
+  // ============================
+  // INIT LOAD
+  // ============================
   useEffect(() => {
     async function init() {
       try {
@@ -58,6 +70,11 @@ const UserProfile = () => {
         setUser(profileData.user || null);
         setPhotos(profileData.photos || []);
         setMe(meData);
+
+        // reset UI
+        setMenuOpenFor(null);
+        setConfirmDelete(null);
+        setDeleting(false);
       } catch (err) {
         console.error(err);
         setError("Unable to load profile at the moment.");
@@ -71,9 +88,36 @@ const UserProfile = () => {
   }, [profileUserId]);
 
   // ============================
+  // CLOSE MENU ON OUTSIDE CLICK + ESC
+  // ============================
+  useEffect(() => {
+    const onMouseDown = (e) => {
+      // se clicchi fuori dall'area page, chiude il menu 3 puntini
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpenFor(null);
+      }
+    };
+
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setMenuOpenFor(null);
+        setConfirmDelete(null);
+      }
+    };
+
+    document.addEventListener("mousedown", onMouseDown);
+    document.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
+
+  // ============================
   // UPLOAD
   // ============================
-  const handleFileChange = (e) => setFiles(Array.from(e.target.files));
+  const handleFileChange = (e) => setFiles(Array.from(e.target.files || []));
 
   const handleUpload = async (e) => {
     e.preventDefault();
@@ -87,16 +131,15 @@ const UserProfile = () => {
 
     try {
       const res = await apiFetch("/api/me/photos", {
-       method: "POST",
-       body: formData,
-         });
+        method: "POST",
+        body: formData,
+      });
 
       if (!res.ok) {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({}));
         throw new Error(err.error || "Upload failed");
       }
 
-      // refresh profilo dopo upload
       const refreshed = await loadProfile();
       setUser(refreshed.user || null);
       setPhotos(refreshed.photos || []);
@@ -106,6 +149,20 @@ const UserProfile = () => {
       setUploadError(err.message);
     } finally {
       setUploading(false);
+    }
+  };
+
+  // ============================
+  // DELETE
+  // ============================
+  const deletePhoto = async (photoId) => {
+    const res = await apiFetch(`/api/me/photos/${photoId}`, {
+      method: "DELETE",
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Delete failed");
     }
   };
 
@@ -138,12 +195,58 @@ const UserProfile = () => {
 
   return (
     <div className="page">
+      {/* MODAL CONFERMA DELETE */}
+      {confirmDelete && (
+        <div
+          className="modal-backdrop"
+          onClick={() => {
+            if (!deleting) setConfirmDelete(null);
+          }}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <h3>Sei sicuro di voler cancellare questa foto?</h3>
+
+            <div className="modal-actions">
+              <button className="modal-btn" disabled={deleting} onClick={() => setConfirmDelete(null)}>
+                No
+              </button>
+
+              <button
+                className="modal-btn danger"
+                disabled={deleting}
+                onClick={async () => {
+                  try {
+                    setDeleting(true);
+                    await deletePhoto(confirmDelete.id);
+                    setConfirmDelete(null);
+
+                    const refreshed = await loadProfile();
+                    setUser(refreshed.user || null);
+                    setPhotos(refreshed.photos || []);
+                  } catch (err) {
+                    console.error(err);
+                    alert(err.message);
+                    setConfirmDelete(null);
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
+              >
+                {deleting ? "Eliminando..." : "Sì, elimina"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* HEADER */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h2 className="center-text" style={{ marginBottom: "1rem" }}>
           @{user.username || "user"}
         </h2>
 
-        {/* shortcut utile: se è il tuo profilo, ti garantisce di tornarci */}
         {me && (
           <button className="creatorButton" onClick={() => navigate("/me")}>
             My profile
@@ -151,9 +254,7 @@ const UserProfile = () => {
         )}
       </div>
 
-      {/* ============================
-          UPLOAD AREA (SOLO SE MIO)
-      ============================ */}
+      {/* UPLOAD AREA (SOLO SE MIO) */}
       {isMine && (
         <div style={{ marginBottom: "2rem", textAlign: "center" }}>
           <form onSubmit={handleUpload}>
@@ -169,15 +270,11 @@ const UserProfile = () => {
             </button>
           </form>
 
-          {uploadError && (
-            <p style={{ color: "red", marginTop: "0.5rem" }}>{uploadError}</p>
-          )}
+          {uploadError && <p style={{ color: "red", marginTop: "0.5rem" }}>{uploadError}</p>}
         </div>
       )}
 
-      {/* ============================
-          PHOTO GRID / EMPTY STATE
-      ============================ */}
+      {/* PHOTO GRID / EMPTY STATE */}
       {photos.length === 0 ? (
         <p className="center-text" style={{ padding: "2rem" }}>
           {isMine ? "Your profile is empty. Upload your first photos 👇" : "No photos yet."}
@@ -186,6 +283,36 @@ const UserProfile = () => {
         <div className="photo-grid">
           {photos.map((p) => (
             <div className="photo-tile" key={p.id}>
+              {isMine && (
+                <div className="photo-actions">
+                  <button
+                    className="photo-dots"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuOpenFor((cur) => (cur === p.id ? null : p.id));
+                    }}
+                    aria-label="Photo options"
+                  >
+                    ⋯
+                  </button>
+
+                  {menuOpenFor === p.id && (
+                    <div className="photo-menu"ref={menuRef}>
+                      <button
+                        className="photo-menu-item danger"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMenuOpenFor(null);
+                          setConfirmDelete(p);
+                        }}
+                      >
+                        Cancella foto
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <img src={`http://localhost:5001${p.file_path}`} alt="photo" loading="lazy" />
               <div className="photo-meta">@{user.username || "user"}</div>
             </div>
