@@ -81,14 +81,10 @@ pool
 /* ================================
    04.1) DB - PATCH SCHEMA (DEV-FRIENDLY)
    ================================ */
-/*
-  Nel tuo DB attuale la tabella users NON ha alcune colonne che il backend usa
-  (es: is_verified, confirmation_token...). Quindi in DEV le aggiungiamo se mancano.
-  In produzione si farebbero migrations, ma qui l'obiettivo è farlo funzionare subito.
-*/
+
 async function ensureUsersSchema() {
   try {
-    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT true;`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS confirmed BOOLEAN DEFAULT true;`);
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS confirmation_token TEXT;`);
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token TEXT;`);
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT;`);
@@ -219,14 +215,14 @@ app.post("/api/register", async (req, res) => {
     const token = uuidv4();
 
     await pool.query(
-      `INSERT INTO users (email, password, username, is_verified, confirmation_token)
+      `INSERT INTO users (email, password, username, confirmed, confirmation_token)
        VALUES ($1,$2,$3,false,$4)`,
       [email, hashed, username, token]
     );
 console.log("TOKEN GENERATO:", token);
 
 const check = await pool.query(
-  `SELECT id, email, is_verified, confirmation_token
+  `SELECT id, email, confirmed, confirmation_token
    FROM users
    WHERE email = $1
    ORDER BY created_at DESC
@@ -264,7 +260,7 @@ app.get("/api/confirm-email", async (req, res) => {
 console.log("TOKEN RICEVUTO DA LINK:", token);
 
 const before = await pool.query(
-  `SELECT id, email, is_verified, confirmation_token
+  `SELECT id, email, confirmed, confirmation_token
    FROM users
    WHERE confirmation_token = $1`,
   [token]
@@ -275,7 +271,7 @@ console.log("DB PRIMA CONFIRM:", before.rows);
   try {
     const r = await pool.query(
       `UPDATE users
-       SET is_verified=true, confirmation_token=NULL
+       SET confirmed=true, confirmation_token=NULL
        WHERE confirmation_token=$1
        RETURNING id`,
       [token]
@@ -290,32 +286,52 @@ console.log("DB PRIMA CONFIRM:", before.rows);
 
 // Login => crea sessioni cookie connect.sid
 app.post("/api/login", async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ message: "Email e password sono obbligatori" });
+  const { identifier, email, password } = req.body;
+
+  // Accetta sia "identifier" (username) sia "email" 
+  const loginId = (identifier || email || "").trim();
+
+  if (!loginId || !password) {
+    return res.status(400).json({ error: "Missing credentials" });
+  }
 
   try {
-    const userResult = await pool.query("SELECT * FROM users WHERE email=$1", [email]);
-    const user = userResult.rows[0];
+    // Cerca utente per email oppure username
+    const result = await pool.query(
+      `
+      SELECT id, email, username, password, confirmed
+      FROM users
+      WHERE email = $1 OR username = $1
+      LIMIT 1
+      `,
+      [loginId]
+    );
 
-    if (!user) return res.status(400).json({ message: "Utente non trovato" });
+    if (result.rowCount === 0) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: "Password errata" });
+    const user = result.rows[0];
 
-    // se la colonna esiste (la patch la crea), allora possiamo usarla
-    if (user.is_verified === false) return res.status(403).json({ message: "Email non verificata" });
+    if (!user.confirmed) {
+      return res.status(403).json({ error: "Email not confirmed" });
+    }
 
-    // session cookie
-    req.session.user = {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-    };
+    const ok = await bcrypt.compare(password, user.password);
+    if (!ok) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
 
-    return res.status(200).json({ message: "Login ok", user: req.session.user });
+    // salva la sessione
+    req.session.user = { id: user.id, email: user.email, username: user.username };
+
+    return res.json({
+      ok: true,
+      user: { id: user.id, email: user.email, username: user.username },
+    });
   } catch (err) {
-    console.error("Errore login:", err);
-    return res.status(500).json({ message: "Errore server" });
+    console.error("login error:", err);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -433,7 +449,7 @@ app.get("/api/me/photos", requireSession, async (req, res) => {
     res.status(500).json({ error: "Server error", detail: err.message });
   }
 });
-
+   //cancella foto da input dell'user (cancella sia da db che da /upload locale)
 app.delete("/api/me/photos/:photoId", requireSession, async (req, res) => {
   const userId = req.user.id;
   const photoId = Number(req.params.photoId);
@@ -450,25 +466,63 @@ app.delete("/api/me/photos/:photoId", requireSession, async (req, res) => {
       return res.status(404).json({ error: "Photo not found or not yours" });
     }
 
-    const filePath = r.rows[0].file_path;
+    const filePath = r.rows[0].file_path; // es: "/uploads/abc.jpg"
 
+    //elimina la riga DB
     await pool.query("DELETE FROM user_images WHERE id=$1 AND user_id=$2", [
       photoId,
       userId,
     ]);
 
-    const absPath = path.join(
-      process.cwd(),
-      filePath.startsWith("/") ? filePath.slice(1) : filePath
-    );
+    //elimina il file fisico 
+    const uploadsDir = path.resolve(__dirname, "uploads");
 
-    fs.unlink(absPath, (err) => {
-      if (err) console.warn("File delete warning:", err.message);
-    });
+    const filename = String(filePath).replace(/^\/?uploads\//, "");
+    const absPath = path.join(uploadsDir, filename);
 
-    res.json({ ok: true });
+    try {
+      await fs.promises.unlink(absPath);
+    } catch (err) {
+      // non blocchiamo la delete DB se il file non esiste 
+      console.warn("File delete warning:", err.message, "absPath:", absPath);
+    }
+
+    return res.json({ ok: true });
   } catch (err) {
     console.error("DELETE /api/me/photos error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+});
+
+
+// Cerca utenti che hanno almeno 1 foto
+app.get("/api/users/search", async (req, res) => {
+  try {
+    const q = (req.query.q || "").trim();
+    const limit = Math.min(Number(req.query.limit) || 10, 25);
+
+    if (q.length < 1) return res.json({ users: [] });
+
+    const r = await pool.query(
+      `
+      SELECT
+        u.id,
+        u.username,
+        u.avatar,
+        COUNT(ui.id)::int AS photo_count
+      FROM users u
+      JOIN user_images ui ON ui.user_id = u.id
+      WHERE u.username ILIKE $1
+      GROUP BY u.id, u.username, u.avatar
+      ORDER BY photo_count DESC, u.username ASC
+      LIMIT $2
+      `,
+      [`%${q}%`, limit]
+    );
+
+    res.json({ users: r.rows });
+  } catch (err) {
+    console.error("Errore /api/users/search:", err);
     res.status(500).json({ error: "Server error" });
   }
 });

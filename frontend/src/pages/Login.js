@@ -9,7 +9,7 @@ const Login = () => {
   const { setUser } = useContext(UserContext);
 
   const [formData, setFormData] = useState({
-    email: "",
+    identifier: "", // <-- email O username
     password: "",
   });
 
@@ -34,7 +34,7 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.email || !formData.password) {
+    if (!formData.identifier || !formData.password) {
       setError("Tutti i campi sono obbligatori.");
       return;
     }
@@ -42,40 +42,36 @@ const Login = () => {
     setIsLoading(true);
     setError("");
 
+    console.log("LOGIN payload:", {
+  identifier: formData.identifier,
+  password: formData.password ? "***" : "",
+});
+
     try {
       const response = await fetch("http://localhost:5001/api/login", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          identifier: formData.identifier.trim(),
+          password: formData.password,
+        }),
       });
 
-      const data = await response.json();
-      console.log("Risposta dal server:", data);
+      const data = await response.json().catch(() => ({}));
 
       if (response.ok && data.user) {
-        const isCreator = data.user.role === "creator";
-        const avatarUrl = isCreator
-          ? data.user.profile_picture
-            ? `http://localhost:5001${data.user.profile_picture}`
-            : "/default-avatar.jpg"
-          : data.user.avatar
-          ? `http://localhost:5001${data.user.avatar}`
-          : "/default-avatar.jpg";
+        const avatarUrl =
+          data.user.avatar && data.user.avatar !== "null"
+            ? `http://localhost:5001${data.user.avatar}`
+            : "/default-avatar.jpg";
 
         setUser({ ...data.user, avatar: avatarUrl });
 
         toast.success(`Bentornato${data.user.username ? `, ${data.user.username}` : ""}!`);
-
-        if (isCreator) {
-          navigate("/gestisci-profilo");
-        } else {
-          navigate("/");
-        }
+        navigate("/");
       } else {
-        setError(data.message || "Credenziali non valide.");
+        setError(data.error || data.message || "Credenziali non valide.");
       }
     } catch (err) {
       console.error("Errore di login:", err);
@@ -88,8 +84,8 @@ const Login = () => {
   return (
     <div className="registration-container">
       <div className="left-side">
-        <h1>TrueSubs</h1>
-        <p>Il tuo abbonamento, la tua libertà.</p>
+        <h1>TrueLens</h1>
+        <p>Be yourself and people's gonna love it.</p>
       </div>
 
       <div className="right-side">
@@ -99,15 +95,17 @@ const Login = () => {
 
           <form onSubmit={handleSubmit}>
             <div style={{ marginBottom: "15px" }}>
-              <label htmlFor="email">Email</label>
+              <label htmlFor="identifier">Email o username</label>
               <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
+                type="text"
+                id="identifier"
+                name="identifier"
+                value={formData.identifier}
                 onChange={handleInputChange}
                 required
                 disabled={isLoading}
+                placeholder="email@example.com oppure matteo"
+                autoComplete="username"
               />
             </div>
 
@@ -121,6 +119,7 @@ const Login = () => {
                 onChange={handleInputChange}
                 required
                 disabled={isLoading}
+                autoComplete="current-password"
               />
             </div>
 

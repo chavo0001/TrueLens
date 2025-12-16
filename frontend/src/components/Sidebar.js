@@ -1,64 +1,78 @@
-import React from "react";
-import { NavLink } from "react-router-dom";
+import React, { useContext } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import "../styles/Sidebar.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronLeft } from "@fortawesome/free-solid-svg-icons";
-import {
-  FaHome,
-  FaMountain,      // Paesaggi
-  FaUser,          // Ritratti
-  FaHeart,         // Matrimoni
-  FaCameraRetro,   // Street
-  FaPaw            // Wildlife
-} from "react-icons/fa";
+import { FaCompass, FaUserCircle, FaStar, FaSignInAlt } from "react-icons/fa";
+import { UserContext } from "../data/UserContext"; // <-- se il path è diverso dimmelo
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Se non vuoi condizionare la sidebar allo stato login, dimmelo e tolgo queste 2 righe
+  const { user } = useContext(UserContext);
+  const isLogged = !!user;
+
   const linkClass = ({ isActive }) => `sidebar-item${isActive ? " active" : ""}`;
+
+  const goExplore = (e) => {
+    e.preventDefault();
+
+    // Se siamo già in home, scrolla su. Altrimenti naviga.
+    if (location.pathname === "/") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      navigate("/");
+    }
+
+    // se sidebar è overlay (mobile), chiudi dopo click
+    if (isOpen) toggleSidebar();
+  };
+
+  const goTo = (path) => (e) => {
+    e.preventDefault();
+    navigate(path);
+    if (isOpen) toggleSidebar();
+  };
 
   return (
     <>
-      {/* SIDEBAR */}
       <div className={`sidebar ${!isOpen ? "closed" : ""}`}>
         <div className="logo">TrueLens</div>
 
         <nav className="sidebar-links">
-          <NavLink to="/"            className={linkClass}>
-            <FaHome className="sidebar-icon" />
-            <span>Home</span>
-          </NavLink>
+          {/* EXPLORE */}
+          <a href="/" className="sidebar-item" onClick={goExplore}>
+            <FaCompass className="sidebar-icon" />
+            <span>Explore</span>
+          </a>
 
-          <NavLink to="/paesaggi"    className={linkClass}>
-            <FaMountain className="sidebar-icon" />
-            <span>Paesaggi</span>
-          </NavLink>
+          {/* MY PROFILE + SAVED: solo se loggato */}
+          {isLogged ? (
+            <>
+              <NavLink to="/me" className={linkClass} onClick={goTo("/me")}>
+                <FaUserCircle className="sidebar-icon" />
+                <span>My profile</span>
+              </NavLink>
 
-          <NavLink to="/ritratti"    className={linkClass}>
-            <FaUser className="sidebar-icon" />
-            <span>Ritratti</span>
-          </NavLink>
-
-          <NavLink to="/matrimoni"   className={linkClass}>
-            <FaHeart className="sidebar-icon" />
-            <span>Matrimoni</span>
-          </NavLink>
-
-          <NavLink to="/street"      className={linkClass}>
-            <FaCameraRetro className="sidebar-icon" />
-            <span>Street Photography</span>
-          </NavLink>
-
-          <NavLink to="/wildlife"    className={linkClass}>
-            <FaPaw className="sidebar-icon" />
-            <span>Wildlife</span>
-          </NavLink>
+              <NavLink to="/saved" className={linkClass} onClick={goTo("/saved")}>
+                <FaStar className="sidebar-icon" />
+                <span>Saved</span>
+              </NavLink>
+            </>
+          ) : (
+            <NavLink to="/login" className={linkClass} onClick={goTo("/login")}>
+              <FaSignInAlt className="sidebar-icon" />
+              <span>Login</span>
+            </NavLink>
+          )}
         </nav>
       </div>
 
-      {/* Lembo quando la sidebar è chiusa */}
       {!isOpen ? (
         <div className="sidebar-lembo" onClick={toggleSidebar} />
       ) : (
-        /* Bottone quando la sidebar è aperta */
         <button className="toggle-button" onClick={toggleSidebar}>
           <FontAwesomeIcon icon={faChevronLeft} />
         </button>

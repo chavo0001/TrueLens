@@ -76,8 +76,8 @@ const UserRegistration = () => {
   return (
     <div className="registration-container">
       <div className="left-side">
-        <h1>TrueSubs</h1>
-        <p>Il tuo abbonamento, la tua libertà.</p>
+        <h1>TrueLens</h1>
+        <p>Be yourself and people's gonna love it.</p>
       </div>
       <div className="right-side">
         <div className="content">

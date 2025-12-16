@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import "../styles/SearchBar.css";
 
 const SearchBar = () => {
@@ -7,6 +8,7 @@ const SearchBar = () => {
   const [isFocused, setIsFocused] = useState(false);
 
   const containerRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!isFocused) {
@@ -24,21 +26,24 @@ const SearchBar = () => {
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [containerRef]);
+  }, []);
 
   // Debounce ricerca
   useEffect(() => {
     if (!isFocused) return;
 
     const delayDebounce = setTimeout(() => {
-      if (query.trim().length < 2) {
+      const q = query.trim();
+      if (q.length < 1) {
         setResults([]);
         return;
       }
 
-      fetch(`http://localhost:5001/api/creators?q=${encodeURIComponent(query)}`)
+      fetch(`http://localhost:5001/api/users/search?q=${encodeURIComponent(q)}&limit=10`, {
+        credentials: "include",
+      })
         .then((res) => res.json())
-        .then((data) => setResults(data))
+        .then((data) => setResults(data.users || []))
         .catch((err) => {
           console.error("Errore durante la ricerca:", err);
           setResults([]);
@@ -53,13 +58,15 @@ const SearchBar = () => {
     setResults([]);
   };
 
+  const goToUser = (userId) => {
+    setIsFocused(false);
+    navigate(`/user/${userId}`);
+  };
+
   return (
     <>
       {isFocused && <div className="overlay-blur" />}
-      <div
-        className={`search-container ${isFocused ? "focused" : ""}`}
-        ref={containerRef}
-      >
+      <div className={`search-container ${isFocused ? "focused" : ""}`} ref={containerRef}>
         <input
           type="text"
           placeholder="Find Photographer..."
@@ -69,26 +76,28 @@ const SearchBar = () => {
           className="searchInput"
           autoFocus={isFocused}
         />
+
         {query && (
-          <button onClick={handleClear} className="clearButton">
+          <button onClick={handleClear} className="clearButton" type="button">
             ×
           </button>
         )}
 
         {results.length > 0 && (
           <ul className="searchResults">
-            {results.map((creator) => (
-              <li key={creator.id} className="resultItem">
+            {results.map((u) => (
+              <li
+                key={u.id}
+                className="resultItem"
+                onMouseDown={(e) => e.preventDefault()} // evita blur prima del click
+                onClick={() => goToUser(u.id)}
+              >
                 <img
-                  src={
-                    creator.profile_picture
-                      ? `http://localhost:5001${creator.profile_picture}`
-                      : "/placeholder.jpg"
-                  }
-                  alt={creator.name}
+                  src={u.avatar ? `http://localhost:5001${u.avatar}` : "/default-avatar.jpg"}
+                  alt={u.username}
                   className="resultAvatar"
                 />
-                <span>{creator.name}</span>
+                <span>{u.username}</span>
               </li>
             ))}
           </ul>

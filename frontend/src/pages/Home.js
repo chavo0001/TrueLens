@@ -54,16 +54,7 @@ const HomePage = () => {
 
   return (
     <>
-       {/* === ACTION BAR IN ALTO === */}
-    <div className="creatorButtonWrapper">
-      <button
-        onClick={() => navigate("/me")}
-        className="creatorButton"
-      >
-        Add photo
-      </button>
-    </div>
-     
+       
       <div className="page">
         <div className="search-bar-wrapper">
           <SearchBar
