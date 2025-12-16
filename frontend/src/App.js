@@ -15,6 +15,8 @@ import { UserProvider, UserContext } from "./data/UserContext";
 import MyProfile from "./pages/MyProfile";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import SettingsProfile from "./pages/SettingsProfile";
+import SettingsSecurity from "./pages/SettingsSecurity";
 
 function AppContent() {
   const { loadingUser } = useContext(UserContext);
@@ -59,6 +61,8 @@ function AppContent() {
         >
           <Route path="/user/:id" element={<UserProfile />} />
           <Route path="/me" element={<MyProfile />} />
+          <Route path="/settings/profile" element={<SettingsProfile />} />
+          <Route path="/settings/security" element={<SettingsSecurity />} />
           <Route index element={<Home />} />
           <Route path="thankyou" element={<ThankYouPage />} />
           <Route path="*" element={<NotFound />} />

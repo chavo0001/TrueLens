@@ -124,6 +124,8 @@ function requireSession(req, res, next) {
   next();
 }
 
+
+
 /* ================================
    06) UPLOADS (uso di multer)
    ================================ */
@@ -133,24 +135,6 @@ const ensureUploadsDir = () => {
 };
 ensureUploadsDir();
 
-// Avatar upload
-const avatarStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname || "").toLowerCase();
-    cb(null, `avatar-${Date.now()}${ext || ".jpg"}`);
-  },
-});
-const uploadAvatar = multer({
-  storage: avatarStorage,
-  limits: { fileSize: 8 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    if (!file.mimetype || !file.mimetype.startsWith("image/")) {
-      return cb(new Error("Only images allowed"));
-    }
-    cb(null, true);
-  },
-});
 
 const uploadsDir = path.join(__dirname, "uploads");
 if (!fs.existsSync(uploadsDir)) {
@@ -194,6 +178,34 @@ const transporter = nodemailer.createTransport({
    08) HEALTH
    ================================ */
 app.get("/api/ping", (req, res) => res.json({ ok: true, port }));
+
+//upload avatar (in cartella locale dentro /uploads/avatar)
+const avatarsDir = path.join(__dirname, "uploads", "avatars");
+if (!fs.existsSync(avatarsDir)) {
+  fs.mkdirSync(avatarsDir, { recursive: true });
+}
+
+const avatarStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, avatarsDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname || "").toLowerCase() || ".jpg";
+    cb(null, `avatar_${req.user.id}_${Date.now()}${ext}`);
+  },
+});
+
+const uploadAvatar = multer({
+  storage: avatarStorage,
+  limits: { fileSize: 8 * 1024 * 1024 }, // 8MB
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype || !file.mimetype.startsWith("image/")) {
+      return cb(new Error("Only images allowed"));
+    }
+    cb(null, true);
+  },
+});
+
 
 /* ================================
    09) LE ROUTES AUTH 
@@ -374,6 +386,85 @@ app.get("/api/me", requireSession, async (req, res) => {
   }
 });
 
+app.patch("/api/me/profile", requireSession, async (req, res) => {
+  const userId = req.user.id;
+  let { username, bio } = req.body;
+
+  username = (username || "").trim();
+  bio = (bio || "").trim();
+
+  if (!username) return res.status(400).json({ error: "Username is required" });
+  if (username.length < 3) return res.status(400).json({ error: "Username too short" });
+  if (username.length > 30) return res.status(400).json({ error: "Username too long" });
+  if (bio.length > 180) return res.status(400).json({ error: "Bio too long (max 180)" });
+
+  try {
+    // Username unico (gestisce il conflitto)
+    const r = await pool.query(
+      `
+      UPDATE users
+      SET username = $1,
+          bio = $2
+      WHERE id = $3
+      RETURNING id, email, username, bio, avatar
+      `,
+      [username, bio, userId]
+    );
+
+    const updated = r.rows[0];
+
+    // aggiorna anche la sessione (così la UI vede subito il nuovo username)
+    req.session.user = {
+      ...req.session.user,
+      id: updated.id,
+      email: updated.email,
+      username: updated.username,
+    };
+
+    res.json({ ok: true, user: updated });
+  } catch (err) {
+    // errore unique constraint su username
+    if (err.code === "23505") {
+      return res.status(409).json({ error: "Username already taken" });
+    }
+    console.error("PATCH /api/me/profile error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.post("/api/me/avatar", requireSession, uploadAvatar.single("avatar"), async (req, res) => {
+  const userId = req.user.id;
+
+  if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+
+  try {
+    // opzionale: elimina avatar vecchio dal disco
+    const prev = await pool.query("SELECT avatar FROM users WHERE id=$1", [userId]);
+    const oldAvatar = prev.rows[0]?.avatar; // es: "/uploads/avatars/xxx.jpg"
+
+    const newAvatarPath = `/uploads/avatars/${req.file.filename}`;
+
+    const r = await pool.query(
+      `UPDATE users SET avatar=$1 WHERE id=$2 RETURNING id, email, username, bio, avatar`,
+      [newAvatarPath, userId]
+    );
+
+    // aggiorna sessione
+    req.session.user = { ...req.session.user, id: r.rows[0].id, email: r.rows[0].email, username: r.rows[0].username };
+
+    // prova a cancellare vecchio avatar se esiste ed è nella cartella avatars
+    if (oldAvatar && oldAvatar.includes("/uploads/avatars/")) {
+      const filename = oldAvatar.replace(/^\/?uploads\/avatars\//, "");
+      const absOld = path.join(avatarDir, filename);
+      fs.promises.unlink(absOld).catch(() => {});
+    }
+
+    res.json({ ok: true, user: r.rows[0] });
+  } catch (err) {
+    console.error("POST /api/me/avatar error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 
 /* ================================
    10) PORTFOLIO / UPLOAD (collegato a user)
@@ -536,7 +627,7 @@ app.get("/api/users/:id", async (req, res) => {
     if (!userId) return res.status(400).json({ error: "Invalid user id" });
 
     const userRes = await pool.query(
-      "SELECT id, username FROM users WHERE id=$1",
+      "SELECT id, username, avatar, bio FROM users WHERE id=$1",
       [userId]
     );
 
@@ -561,6 +652,7 @@ app.get("/api/users/:id", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
 
 /* ================================
    10.2) EXPLORE (foto di tutti gli utenti)
@@ -685,27 +777,35 @@ app.post("/api/reset-password", async (req, res) => {
     res.status(500).json({ message: "Errore server" });
   }
 });
+app.post("/api/me/change-password", requireSession, async (req, res) => {
+  const userId = req.user.id;
+  const { oldPassword, newPassword } = req.body;
 
-app.post("/api/change-password", async (req, res) => {
-  const { token, newPassword } = req.body;
-  if (!token || !newPassword) return res.status(400).json({ message: "Token e nuova password sono obbligatori" });
+  if (!oldPassword || !newPassword) {
+    return res.status(400).json({ error: "Missing fields" });
+  }
+
+  if (newPassword.length < 8) {
+    return res.status(400).json({ error: "Password too short (min 8)" });
+  }
 
   try {
+    const r = await pool.query("SELECT password FROM users WHERE id=$1", [userId]);
+    if (r.rowCount === 0) return res.status(404).json({ error: "User not found" });
+
+    const ok = await bcrypt.compare(oldPassword, r.rows[0].password);
+    if (!ok) return res.status(401).json({ error: "Old password is incorrect" });
+
     const hashed = await bcrypt.hash(newPassword, 10);
+    await pool.query("UPDATE users SET password=$1 WHERE id=$2", [hashed, userId]);
 
-    const u = await pool.query(
-      "UPDATE users SET password=$1, reset_token=NULL WHERE reset_token=$2 RETURNING id",
-      [hashed, token]
-    );
-
-    if (u.rowCount === 0) return res.status(400).json({ message: "Token non valido" });
-
-    res.json({ message: "Password aggiornata" });
+    res.json({ ok: true });
   } catch (err) {
-    console.error("Errore change-password:", err);
-    res.status(500).json({ message: "Errore server" });
+    console.error("POST /api/me/change-password error:", err);
+    res.status(500).json({ error: "Server error" });
   }
 });
+
 
 /* ================================
    13) FRONTEND BUILD (ALWAYS LAST)

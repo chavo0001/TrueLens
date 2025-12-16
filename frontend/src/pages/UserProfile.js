@@ -246,12 +246,6 @@ const UserProfile = () => {
         <h2 className="center-text" style={{ marginBottom: "1rem" }}>
           @{user.username || "user"}
         </h2>
-
-        {me && (
-          <button className="creatorButton" onClick={() => navigate("/me")}>
-            My profile
-          </button>
-        )}
       </div>
 
       {/* UPLOAD AREA (SOLO SE MIO) */}
