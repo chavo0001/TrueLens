@@ -347,12 +347,41 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-app.get("/api/check-session", (req, res) => {
-  if (req.session && req.session.user) {
-    return res.json({ loggedIn: true, user: req.session.user });
+app.get("/api/check-session", async (req, res) => {
+  try {
+    if (!req.session || !req.session.user) {
+      return res.json({ loggedIn: false });
+    }
+
+    const userId = req.session.user.id;
+
+    const r = await pool.query(
+      "SELECT id, email, username, avatar, bio FROM users WHERE id=$1",
+      [userId]
+    );
+
+    if (r.rowCount === 0) {
+      
+      return res.json({ loggedIn: false });
+    }
+
+    //sessione sincronizzata
+    req.session.user = {
+      ...req.session.user,
+      id: r.rows[0].id,
+      email: r.rows[0].email,
+      username: r.rows[0].username,
+      avatar: r.rows[0].avatar,
+      bio: r.rows[0].bio,
+    };
+
+    return res.json({ loggedIn: true, user: r.rows[0] });
+  } catch (err) {
+    console.error("Errore /api/check-session:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-  return res.json({ loggedIn: false });
 });
+
 
 app.get("/api/user", (req, res) => {
   if (req.session && req.session.user) return res.json(req.session.user);

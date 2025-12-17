@@ -6,7 +6,7 @@ import ProfileLayout from "./ProfileLayout";
 const MyProfile = () => {
   const navigate = useNavigate();
 
-  const [setMe] = useState(null);
+  const [me,setMe] = useState(null);
   const [profile, setProfile] = useState(null); // { user, photos }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
