@@ -1,15 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../api/apiFetch";
-import "../styles/MyProfile.css";
+import ProfileLayout from "./ProfileLayout";
 
 const MyProfile = () => {
   const navigate = useNavigate();
 
-  const [me, setMe] = useState(null);
+  const [setMe] = useState(null);
   const [profile, setProfile] = useState(null); // { user, photos }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [likesTotal, setLikesTotal] = useState(null);
 
   // Upload modal
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -63,6 +64,13 @@ const MyProfile = () => {
     return res.json(); // { user, photos }
   }
 
+  async function loadLikesTotal(userId) {
+  const res = await apiFetch(`/api/users/${userId}/likes-total`);
+  if (!res.ok) return null;
+  const data = await res.json();
+  return typeof data.likesTotal === "number" ? data.likesTotal : null;
+}
+
   async function refresh() {
     try {
       setLoading(true);
@@ -80,8 +88,10 @@ const MyProfile = () => {
         setError("Impossibile caricare il profilo.");
         return;
       }
+      
+      const total = await loadLikesTotal(meData.id);
+      setLikesTotal(total);
 
-      // Ordina per data (nel caso backend non lo faccia)
       const sorted = [...(prof.photos || [])].sort(
         (a, b) => new Date(b.created_at) - new Date(a.created_at)
       );
@@ -99,14 +109,6 @@ const MyProfile = () => {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const avatarUrl =
-    (profile?.user?.avatar && `http://localhost:5001${profile.user.avatar}`) ||
-    "/default-avatar.jpg";
-
-  const username = profile?.user?.username || me?.username || "user";
-
-  const photoCount = photos.length;
 
   const openUpload = () => setUploadOpen(true);
   const closeUpload = () => {
@@ -127,7 +129,6 @@ const MyProfile = () => {
       const res = await apiFetch("/api/me/photos", {
         method: "POST",
         body: form,
-        // IMPORTANT: non mettere Content-Type con FormData
       });
 
       if (!res.ok) {
@@ -174,6 +175,29 @@ const MyProfile = () => {
     }
   };
 
+  // (optional) toggle like – lo attiviamo quando il backend torna likesCount/likedByMe
+  const handleToggleLike = async (photoId) => {
+    try {
+      const res = await apiFetch(`/api/photos/${photoId}/like`, { method: "POST" });
+      if (!res.ok) return;
+      const data = await res.json();
+
+      setProfile((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          photos: (prev.photos || []).map((p) =>
+            p.id === photoId
+              ? { ...p, likedByMe: data.liked, likesCount: data.likesCount }
+              : p
+          ),
+        };
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   if (loading) {
     return (
       <div className="mp-page">
@@ -194,120 +218,36 @@ const MyProfile = () => {
     );
   }
 
-  return (
-    <div className="mp-page">
-      <div className="mp-container">
-        {/* HEADER PROFILO (stile IG) */}
-        <div className="mp-header-card">
-          <div className="mp-avatar-wrap">
-            <img className="mp-avatar" src={avatarUrl} alt="avatar" />
-          </div>
-
-          <div className="mp-header-info">
-            <div className="mp-header-top">
-              <div className="mp-username">@{username}</div>
-
-              <div className="mp-actions">
-                <button
-                  className="mp-btn"
-                  onClick={() => navigate("/settings/profile")}
-                >
-                  Edit profile
-                </button>
-                <button
-                  className="mp-btn mp-btn-ghost"
-                  onClick={() => navigate("/settings/security")}
-                >
-                  Security
-                </button>
-                <button className="mp-btn mp-btn-primary" onClick={openUpload}>
-                  Add photo
-                </button>
-              </div>
-            </div>
-
-            <div className="mp-stats">
-              <div className="mp-stat">
-                <span className="mp-stat-num">{photoCount}</span>
-                <span className="mp-stat-label">photos</span>
-              </div>
-              {/* spazio per future stats */}
-              <div className="mp-stat mp-stat-muted">
-                <span className="mp-stat-num">—</span>
-                <span className="mp-stat-label">followers</span>
-              </div>
-              <div className="mp-stat mp-stat-muted">
-                <span className="mp-stat-num">—</span>
-                <span className="mp-stat-label">likes</span>
-              </div>
-            </div>
-
-            <div className="mp-bio">
-              {profile?.user?.bio ? (
-                profile.user.bio
-              ) : (
-                <span className="mp-bio-placeholder">
-                  Add a bio in Edit profile.
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* GALLERY */}
-        <div className="mp-gallery">
-          {photos.length === 0 ? (
-            <div className="mp-empty">
-              Nessuna foto ancora. Premi <b>Add photo</b> per caricare la prima.
-            </div>
-          ) : (
-            <div className="mp-grid">
-              {photos.map((p) => (
-                <div key={p.id} className="mp-tile">
-                  {/* 3 puntini */}
-                  <div className="mp-photo-actions">
-                    <button
-                      className="mp-photo-dots"
-                      onClick={() =>
-                        setMenuOpenFor((cur) => (cur === p.id ? null : p.id))
-                      }
-                      aria-label="photo menu"
-                    >
-                      •••
-                    </button>
-
-                    {menuOpenFor === p.id && (
-                      <div className="mp-photo-menu">
-                        <button
-                          className="mp-photo-menu-item mp-danger"
-                          onClick={() => requestDelete(p)}
-                        >
-                          Delete photo
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  <img
-                    className="mp-img"
-                    src={`http://localhost:5001${p.file_path}`}
-                    alt=""
-                    loading="lazy"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
+  if (!profile?.user) {
+    return (
+      <div className="mp-page">
+        <div className="mp-container">
+          <div className="mp-error">Profilo non disponibile.</div>
         </div>
       </div>
+    );
+  }
+
+  return (
+    <>
+      <ProfileLayout
+        profileUser={profile.user}
+        photos={photos}
+        isMe={true}
+        likesTotal={likesTotal}
+        onOpenUpload={openUpload}
+        onOpenDeleteMenu={(photoId) =>
+          setMenuOpenFor((cur) => (cur === photoId ? null : photoId))
+        }
+        menuOpenFor={menuOpenFor}
+        onRequestDelete={requestDelete}
+        onToggleLike={handleToggleLike} // se ancora non hai likes nel payload, non succede nulla di grave (mostrerà 0)
+      />
 
       {/* UPLOAD MODAL */}
       {uploadOpen && (
         <div className="mp-modal-backdrop" onMouseDown={closeUpload}>
-          <div
-            className="mp-modal"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
+          <div className="mp-modal" onMouseDown={(e) => e.stopPropagation()}>
             <h3>Add photo</h3>
             <div className="mp-modal-body">
               <input ref={fileRef} type="file" accept="image/*" />
@@ -331,7 +271,10 @@ const MyProfile = () => {
 
       {/* DELETE CONFIRM MODAL */}
       {confirmDelete && (
-        <div className="mp-modal-backdrop" onMouseDown={() => setConfirmDelete(null)}>
+        <div
+          className="mp-modal-backdrop"
+          onMouseDown={() => setConfirmDelete(null)}
+        >
           <div className="mp-modal" onMouseDown={(e) => e.stopPropagation()}>
             <h3>Sei sicuro di voler cancellare questa foto?</h3>
 
@@ -354,7 +297,7 @@ const MyProfile = () => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

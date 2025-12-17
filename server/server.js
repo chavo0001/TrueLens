@@ -467,7 +467,7 @@ app.post("/api/me/avatar", requireSession, uploadAvatar.single("avatar"), async 
 });
 
 /* ================================
-   10) PORTFOLIO / UPLOAD (collegato a user)
+   10) PORTFOLIO / UPLOAD (collegato a user) + Likes
    ================================ */
 async function ensureUserImagesTable() {
   try {
@@ -489,6 +489,31 @@ async function ensureUserImagesTable() {
   }
 }
 ensureUserImagesTable();
+
+async function ensurePhotoLikesTable() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS photo_likes (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        photo_id INTEGER NOT NULL REFERENCES user_images(id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ DEFAULT now(),
+        UNIQUE (user_id, photo_id)
+      );
+    `);
+
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_photo_likes_photo_id ON photo_likes(photo_id);
+    `);
+
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_photo_likes_user_id ON photo_likes(user_id);
+    `);
+  } catch (err) {
+    console.error("❌ Errore creazione tabella photo_likes:", err.message);
+  }
+}
+ensurePhotoLikesTable();
 
 // Upload portfolio (user loggato)
 app.post(
@@ -528,18 +553,32 @@ app.get("/api/me/photos", requireSession, async (req, res) => {
     const userId = req.user.id;
 
     const photosRes = await pool.query(
-      `SELECT id, file_path, created_at
-       FROM user_images
-       WHERE user_id=$1
-       ORDER BY created_at DESC`,
+      `
+      SELECT
+        ui.id,
+        ui.file_path,
+        ui.created_at,
+        COUNT(pl.id)::int AS "likesCount",
+        EXISTS (
+          SELECT 1 FROM photo_likes pl2
+          WHERE pl2.photo_id = ui.id AND pl2.user_id = $1
+        ) AS "likedByMe"
+      FROM user_images ui
+      LEFT JOIN photo_likes pl ON pl.photo_id = ui.id
+      WHERE ui.user_id = $1
+      GROUP BY ui.id
+      ORDER BY ui.created_at DESC
+      `,
       [userId]
     );
+
     res.json({ photos: photosRes.rows });
   } catch (err) {
     console.error("Errore get portfolio:", err);
     res.status(500).json({ error: "Server error", detail: err.message });
   }
 });
+
    //cancella foto da input dell'user (cancella sia da db che da /upload locale)
 app.delete("/api/me/photos/:photoId", requireSession, async (req, res) => {
   const userId = req.user.id;
@@ -582,6 +621,81 @@ app.delete("/api/me/photos/:photoId", requireSession, async (req, res) => {
   } catch (err) {
     console.error("DELETE /api/me/photos error:", err);
     return res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Toggle like su una foto (serve il login)
+app.post("/api/photos/:photoId/like", requireSession, async (req, res) => {
+  const userId = req.user.id;
+  const photoId = Number(req.params.photoId);
+
+  if (!Number.isInteger(photoId)) {
+    return res.status(400).json({ error: "Invalid photoId" });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // check foto esiste
+    const exists = await client.query("SELECT id FROM user_images WHERE id = $1", [photoId]);
+    if (exists.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Photo not found" });
+    }
+
+    // prova insert (se già esiste non fa nulla)
+    const ins = await client.query(
+      `INSERT INTO photo_likes (user_id, photo_id)
+       VALUES ($1, $2)
+       ON CONFLICT (user_id, photo_id) DO NOTHING
+       RETURNING id`,
+      [userId, photoId]
+    );
+
+    let liked;
+    if (ins.rowCount === 1) {
+      liked = true;
+    } else {
+      await client.query(
+        "DELETE FROM photo_likes WHERE user_id = $1 AND photo_id = $2",
+        [userId, photoId]
+      );
+      liked = false;
+    }
+
+    const countRes = await client.query(
+      "SELECT COUNT(*)::int AS likes_count FROM photo_likes WHERE photo_id = $1",
+      [photoId]
+    );
+
+    await client.query("COMMIT");
+    return res.json({ liked, likesCount: countRes.rows[0].likes_count });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("POST /api/photos/:photoId/like error:", err);
+    return res.status(500).json({ error: "Server error" });
+  } finally {
+    client.release();
+  }
+});
+
+app.get("/api/users/:id/likes-total", async (req, res) => {
+  const userId = Number(req.params.id);
+  if (!Number.isInteger(userId)) return res.status(400).json({ error: "Invalid user id" });
+
+  try {
+    const r = await pool.query(
+      `SELECT COUNT(*)::int AS likes_total
+       FROM photo_likes pl
+       JOIN user_images ui ON ui.id = pl.photo_id
+       WHERE ui.user_id = $1`,
+      [userId]
+    );
+    res.json({ likesTotal: r.rows[0].likes_total });
+  } catch (err) {
+    console.error("GET /api/users/:id/likes-total error:", err);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -634,14 +748,34 @@ app.get("/api/users/:id", async (req, res) => {
     if (userRes.rowCount === 0) {
       return res.status(404).json({ error: "User not found" });
     }
+    const currentUserId = req.session?.user?.id || null;
 
     const photosRes = await pool.query(
-      `SELECT id, user_id, file_path, created_at
-       FROM user_images
-       WHERE user_id=$1
-       ORDER BY created_at DESC`,
-      [userId]
-    );
+  `
+  SELECT
+    ui.id,
+    ui.user_id,
+    ui.file_path,
+    ui.created_at,
+    COUNT(pl.id)::int AS "likesCount",
+    CASE
+      WHEN $2::int IS NULL THEN false
+      ELSE EXISTS (
+        SELECT 1
+        FROM photo_likes pl2
+        WHERE pl2.photo_id = ui.id
+          AND pl2.user_id = $2
+      )
+    END AS "likedByMe"
+  FROM user_images ui
+  LEFT JOIN photo_likes pl ON pl.photo_id = ui.id
+  WHERE ui.user_id = $1
+  GROUP BY ui.id
+  ORDER BY ui.created_at DESC
+  `,
+  [userId, currentUserId]
+);
+
 
     res.json({
       user: userRes.rows[0],
@@ -662,21 +796,32 @@ app.get("/api/explore/photos", async (req, res) => {
   try {
     const limit = Math.min(Number(req.query.limit) || 60, 200);
     const offset = Math.max(Number(req.query.offset) || 0, 0);
+    const currentUserId = req.session?.user?.id || null;
 
     const r = await pool.query(
       `
-      SELECT 
+      SELECT
         ui.id,
         ui.file_path,
         ui.created_at,
         u.id AS user_id,
-        u.username
+        u.username,
+        COUNT(pl.id)::int AS "likesCount",
+        CASE
+          WHEN $3::int IS NULL THEN false
+          ELSE EXISTS (
+            SELECT 1 FROM photo_likes pl2
+            WHERE pl2.photo_id = ui.id AND pl2.user_id = $3
+          )
+        END AS "likedByMe"
       FROM user_images ui
       JOIN users u ON u.id = ui.user_id
+      LEFT JOIN photo_likes pl ON pl.photo_id = ui.id
+      GROUP BY ui.id, u.id
       ORDER BY ui.created_at DESC
       LIMIT $1 OFFSET $2
       `,
-      [limit, offset]
+      [limit, offset, currentUserId]
     );
 
     res.json({ photos: r.rows, limit, offset });
@@ -687,11 +832,12 @@ app.get("/api/explore/photos", async (req, res) => {
 });
 
 
+
 /* ================================
    11) SETTINGS ROUTES (clean)
    ================================ */
 
-// User settings (solo user, perché esiste solo user)
+// User settings 
 app.get("/api/user/settings", requireSession, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -808,12 +954,8 @@ app.post("/api/me/change-password", requireSession, async (req, res) => {
 
 
 /* ================================
-   13) FRONTEND BUILD (ALWAYS LAST)
+   13) FRONTEND BUILD 
    ================================ */
-/*
-  Se stai usando React in dev (npm start nel frontend), NON esiste /frontend/build.
-  Quindi qui lo serviamo solo se build/index.html esiste.
-*/
 const buildDir = path.join(__dirname, "../frontend/build");
 const buildIndex = path.join(buildDir, "index.html");
 
