@@ -455,7 +455,7 @@ app.post("/api/me/avatar", requireSession, uploadAvatar.single("avatar"), async 
     // prova a cancellare vecchio avatar se esiste ed è nella cartella avatars
     if (oldAvatar && oldAvatar.includes("/uploads/avatars/")) {
       const filename = oldAvatar.replace(/^\/?uploads\/avatars\//, "");
-      const absOld = path.join(avatarDir, filename);
+      const absOld = path.join(avatarsDir, filename);
       fs.promises.unlink(absOld).catch(() => {});
     }
 
