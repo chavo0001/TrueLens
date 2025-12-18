@@ -104,7 +104,6 @@ const Login = () => {
                 onChange={handleInputChange}
                 required
                 disabled={isLoading}
-                placeholder="email@example.com oppure matteo"
                 autoComplete="username"
               />
             </div>

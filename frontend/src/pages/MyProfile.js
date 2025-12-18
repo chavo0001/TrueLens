@@ -16,6 +16,7 @@ const MyProfile = () => {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef(null);
+  const [followersCount, setFollowersCount] = useState(null);
 
   // 3 dots menu + delete confirm modal
   const [menuOpenFor, setMenuOpenFor] = useState(null); // photoId | null
@@ -70,6 +71,14 @@ const MyProfile = () => {
   const data = await res.json();
   return typeof data.likesTotal === "number" ? data.likesTotal : null;
 }
+  async function loadFollowersCount(userId) {
+  const res = await apiFetch(`/api/users/${userId}/followers-count`);
+  if (!res.ok) return null;
+  const data = await res.json();
+  return typeof data.followersCount === "number"
+    ? data.followersCount
+    : null;
+}
 
   async function refresh() {
     try {
@@ -91,6 +100,8 @@ const MyProfile = () => {
       
       const total = await loadLikesTotal(meData.id);
       setLikesTotal(total);
+      const totalFollowers = await loadFollowersCount(meData.id);
+      setFollowersCount(totalFollowers);
 
       const sorted = [...(prof.photos || [])].sort(
         (a, b) => new Date(b.created_at) - new Date(a.created_at)
@@ -235,6 +246,7 @@ const MyProfile = () => {
         photos={photos}
         isMe={true}
         likesTotal={likesTotal}
+        followersCount={followersCount} 
         onOpenUpload={openUpload}
         onOpenDeleteMenu={(photoId) =>
           setMenuOpenFor((cur) => (cur === photoId ? null : photoId))

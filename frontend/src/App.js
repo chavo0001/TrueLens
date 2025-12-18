@@ -17,7 +17,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import SettingsProfile from "./pages/SettingsProfile";
 import SettingsSecurity from "./pages/SettingsSecurity";
-
+import FollowersPage from "./pages/FollowersPage";
 function AppContent() {
   const { loadingUser } = useContext(UserContext);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -63,6 +63,8 @@ function AppContent() {
           <Route path="/me" element={<MyProfile />} />
           <Route path="/settings/profile" element={<SettingsProfile />} />
           <Route path="/settings/security" element={<SettingsSecurity />} />
+          <Route path="/user/:id/followers" element={<FollowersPage />} />
+          <Route path="/me/followers" element={<FollowersPage isMe />} />
           <Route index element={<Home />} />
           <Route path="thankyou" element={<ThankYouPage />} />
           <Route path="*" element={<NotFound />} />

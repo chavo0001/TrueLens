@@ -300,7 +300,7 @@ console.log("DB PRIMA CONFIRM:", before.rows);
 app.post("/api/login", async (req, res) => {
   const { identifier, email, password } = req.body;
 
-  // Accetta sia "identifier" (username) sia "email" 
+  // Accetta sia "identifier" (username) sia "email"
   const loginId = (identifier || email || "").trim();
 
   if (!loginId || !password) {
@@ -311,7 +311,7 @@ app.post("/api/login", async (req, res) => {
     // Cerca utente per email oppure username
     const result = await pool.query(
       `
-      SELECT id, email, username, password, confirmed
+      SELECT id, email, username, password, avatar, bio, confirmed
       FROM users
       WHERE email = $1 OR username = $1
       LIMIT 1
@@ -334,18 +334,26 @@ app.post("/api/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    // salva la sessione
-    req.session.user = { id: user.id, email: user.email, username: user.username };
+    // salva la sessione (con avatar, così navbar ok anche dopo logout/login)
+    req.session.user = {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      avatar: user.avatar,
+      bio: user.bio || null,
+      confirmed: user.confirmed,
+    };
 
     return res.json({
       ok: true,
-      user: { id: user.id, email: user.email, username: user.username },
+      user: req.session.user, // ✅ ritorniamo lo stesso oggetto salvato in sessione
     });
   } catch (err) {
     console.error("login error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
+
 
 app.get("/api/check-session", async (req, res) => {
   try {
@@ -402,7 +410,7 @@ app.get("/api/me", requireSession, async (req, res) => {
     const userId = req.user.id;
 
     const r = await pool.query(
-      "SELECT id, email, username FROM users WHERE id=$1",
+      "SELECT id, email, username, avatar, bio FROM users WHERE id=$1",
       [userId]
     );
 
@@ -728,6 +736,99 @@ app.get("/api/users/:id/likes-total", async (req, res) => {
   }
 });
 
+//followers
+app.post("/api/users/:id/follow", requireSession, async (req, res) => {
+  const followerId = req.user.id;
+  const followingId = Number(req.params.id);
+
+  if (!followingId || followerId === followingId) {
+    return res.status(400).json({ error: "Invalid user" });
+  }
+
+  try {
+    const exists = await pool.query(
+      `SELECT 1 FROM followers WHERE follower_id=$1 AND following_id=$2`,
+      [followerId, followingId]
+    );
+
+    if (exists.rowCount > 0) {
+      await pool.query(
+        `DELETE FROM followers WHERE follower_id=$1 AND following_id=$2`,
+        [followerId, followingId]
+      );
+      return res.json({ following: false });
+    }
+
+    await pool.query(
+      `INSERT INTO followers (follower_id, following_id) VALUES ($1,$2)`,
+      [followerId, followingId]
+    );
+
+    return res.json({ following: true });
+  } catch (err) {
+    console.error("follow error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+//conta followers
+app.get("/api/users/:id/followers-count", async (req, res) => {
+  const userId = Number(req.params.id);
+
+  const r = await pool.query(
+    `SELECT COUNT(*)::int AS count FROM followers WHERE following_id=$1`,
+    [userId]
+  );
+
+  res.json({ followersCount: r.rows[0].count });
+});
+
+//conta following
+app.get("/api/users/:id/following-count", async (req, res) => {
+  const userId = Number(req.params.id);
+
+  const r = await pool.query(
+    `SELECT COUNT(*)::int AS count FROM followers WHERE follower_id=$1`,
+    [userId]
+  );
+
+  res.json({ followingCount: r.rows[0].count });
+});
+
+app.get("/api/users/:id/follow-status", requireSession, async (req, res) => {
+  const followerId = req.user.id;
+  const followingId = Number(req.params.id);
+
+  const r = await pool.query(
+    `SELECT 1 FROM followers WHERE follower_id=$1 AND following_id=$2`,
+    [followerId, followingId]
+  );
+
+  res.json({ following: r.rowCount > 0 });
+});
+
+app.get("/api/users/:id/followers", async (req, res) => {
+  const userId = Number(req.params.id);
+  if (!userId) return res.status(400).json({ error: "Invalid user id" });
+
+  try {
+    const r = await pool.query(
+      `
+      SELECT u.id, u.username, u.avatar
+      FROM followers f
+      JOIN users u ON u.id = f.follower_id
+      WHERE f.following_id = $1
+      ORDER BY f.created_at DESC
+      `,
+      [userId]
+    );
+
+    res.json({ followers: r.rows });
+  } catch (err) {
+    console.error("followers list error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 
 // Cerca utenti che hanno almeno 1 foto
 app.get("/api/users/search", async (req, res) => {

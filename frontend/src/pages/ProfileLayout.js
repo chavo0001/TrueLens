@@ -1,30 +1,35 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import "../styles/MyProfile.css"; // riuso il tuo CSS mp-*
+import "../styles/MyProfile.css";
 
 const ProfileLayout = ({
   profileUser,
   photos = [],
   isMe = false,
 
-  // stats extra
+  // stats
   likesTotal = null,
   followersCount = null,
 
+  // follow
+  isFollowing = false,
+  onToggleFollow = null,
+
   // actions
-  onOpenUpload = null,      // per MyProfile (apre modal upload)
-  onOpenDeleteMenu = null,  // (photoId) => void
-  menuOpenFor = null,       // photoId | null
-  onRequestDelete = null,   // (photoObj) => void
+  onOpenUpload = null,
+  onOpenDeleteMenu = null,
+  menuOpenFor = null,
+  onRequestDelete = null,
 
   // likes
-  onToggleLike = null,      // (photoId) => void
+  onToggleLike = null,
 }) => {
   const navigate = useNavigate();
 
   const avatarUrl =
-    (profileUser?.avatar && `http://localhost:5001${profileUser.avatar}`) ||
-    "/default-avatar.jpg";
+    profileUser?.avatar
+      ? `http://localhost:5001${profileUser.avatar}`
+      : "/default-avatar.jpg";
 
   const username = profileUser?.username || "user";
   const photoCount = photos.length;
@@ -32,7 +37,6 @@ const ProfileLayout = ({
   return (
     <div className="mp-page">
       <div className="mp-container">
-        {/* HEADER PROFILO (stile IG) */}
         <div className="mp-header-card">
           <div className="mp-avatar-wrap">
             <img className="mp-avatar" src={avatarUrl} alt="avatar" />
@@ -44,29 +48,27 @@ const ProfileLayout = ({
 
               {isMe ? (
                 <div className="mp-actions">
-                  <button
-                    className="mp-btn"
-                    onClick={() => navigate("/settings/profile")}
-                  >
+                  <button className="mp-btn" onClick={() => navigate("/settings/profile")}>
                     Edit profile
                   </button>
-
-                  <button
-                    className="mp-btn mp-btn-ghost"
-                    onClick={() => navigate("/settings/security")}
-                  >
+                  <button className="mp-btn mp-btn-ghost" onClick={() => navigate("/settings/security")}>
                     Security
                   </button>
-
                   <button
                     className="mp-btn mp-btn-primary"
                     onClick={() => onOpenUpload && onOpenUpload()}
-                    disabled={!onOpenUpload}
                   >
                     Add photo
                   </button>
                 </div>
-              ) : null}
+              ) : (
+                <button
+                  className={`mp-btn ${!isFollowing ? "mp-btn-primary" : ""}`}
+                  onClick={() => onToggleFollow && onToggleFollow()}
+                >
+                  {isFollowing ? "Following" : "Follow"}
+                </button>
+              )}
             </div>
 
             <div className="mp-stats">
@@ -75,83 +77,73 @@ const ProfileLayout = ({
                 <span className="mp-stat-label">photos</span>
               </div>
 
-              <div className="mp-stat mp-stat-muted">
-                <span className="mp-stat-num">{followersCount ?? "—"}</span>
-                <span className="mp-stat-label">followers</span>
-              </div>
+              <div
+                className="mp-stat mp-stat-clickable"
+                onClick={() =>
+                isMe
+                ? navigate("/me/followers")
+                : navigate(`/user/${profileUser.id}/followers`)
+              }
+             >
+              <span className="mp-stat-num">{followersCount ?? "—"}</span>
+              <span className="mp-stat-label">followers</span>
+       </div>
 
-              <div className="mp-stat mp-stat-muted">
+
+              <div className="mp-stat">
                 <span className="mp-stat-num">{likesTotal ?? "—"}</span>
                 <span className="mp-stat-label">likes</span>
               </div>
             </div>
 
             <div className="mp-bio">
-              {profileUser?.bio ? (
-                profileUser.bio
-              ) : isMe ? (
-                <span className="mp-bio-placeholder">Add a bio in Edit profile.</span>
-              ) : null}
+              {profileUser?.bio || (isMe && <span className="mp-bio-placeholder">Add a bio</span>)}
             </div>
           </div>
         </div>
 
         {/* GALLERY */}
         <div className="mp-gallery">
-          {photos.length === 0 ? (
-            <div className="mp-empty">
-              {isMe
-                ? <>Nessuna foto ancora. Premi <b>Add photo</b> per caricare la prima.</>
-                : "No photos yet."}
-            </div>
-          ) : (
-            <div className="mp-grid">
-              {photos.map((p) => (
-                <div key={p.id} className="mp-tile">
-                  {/* 3 puntini solo se isMe */}
-                  {isMe ? (
-                    <div className="mp-photo-actions">
-                      <button
-                        className="mp-photo-dots"
-                        onClick={() => onOpenDeleteMenu && onOpenDeleteMenu(p.id)}
-                        aria-label="photo menu"
-                      >
-                        •••
-                      </button>
+          <div className="mp-grid">
+            {photos.map((p) => (
+              <div key={p.id} className="mp-tile">
+                {isMe && (
+                  <div className="mp-photo-actions">
+                    <button
+                      className="mp-photo-dots"
+                      onClick={() => onOpenDeleteMenu && onOpenDeleteMenu(p.id)}
+                    >
+                      •••
+                    </button>
 
-                      {menuOpenFor === p.id ? (
-                        <div className="mp-photo-menu">
-                          <button
-                            className="mp-photo-menu-item mp-danger"
-                            onClick={() => onRequestDelete && onRequestDelete(p)}
-                          >
-                            Delete photo
-                          </button>
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
+                    {menuOpenFor === p.id && (
+                      <div className="mp-photo-menu">
+                        <button
+                          className="mp-photo-menu-item mp-danger"
+                          onClick={() => onRequestDelete && onRequestDelete(p)}
+                        >
+                          Delete photo
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
 
-                  <img
-                    className="mp-img"
-                    src={`http://localhost:5001${p.file_path}`}
-                    alt=""
-                    loading="lazy"
-                  />
+                <img
+                  className="mp-img"
+                  src={`http://localhost:5001${p.file_path}`}
+                  alt=""
+                />
 
-                  {/* Like badge (se vuoi già agganciarlo dopo) */}
-                  <button
-                    className={`like-badge ${p.likedByMe ? "liked" : ""}`}
-                    onClick={() => onToggleLike && onToggleLike(p.id)}
-                    disabled={!onToggleLike}
-                    title={p.likedByMe ? "Unlike" : "Like"}
-                  >
-                    ❤️ <span>{p.likesCount ?? 0}</span>
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+                <button
+                  className={`like-badge ${p.likedByMe ? "liked" : ""}`}
+                  onClick={() => onToggleLike && onToggleLike(p.id)}
+                >
+                  ❤️ {p.likesCount ?? 0}
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

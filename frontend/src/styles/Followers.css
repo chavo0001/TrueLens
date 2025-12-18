@@ -1,0 +1,55 @@
+/* =========================
+   FOLLOWERS STATS (Profile)
+   ========================= */
+
+.mp-stat-clickable {
+  cursor: pointer;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+  position: relative;
+}
+
+/* Hover generale */
+.mp-stat-clickable:hover {
+  transform: translateY(-2px);
+  opacity: 0.85;
+}
+
+/* Numero */
+.mp-stat-clickable .mp-stat-num {
+  transition: color 0.25s ease;
+}
+
+/* Label */
+.mp-stat-clickable .mp-stat-label {
+  font-size: 13px;
+  letter-spacing: 0.3px;
+  opacity: 0.85;
+  transition: opacity 0.25s ease;
+}
+
+/* Hover accent */
+.mp-stat-clickable:hover .mp-stat-num {
+  color: #4f7cff; /* stesso blu dei bottoni primary */
+}
+
+.mp-stat-clickable:hover .mp-stat-label {
+  opacity: 1;
+}
+
+/* Mini underline animata */
+.mp-stat-clickable::after {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  width: 0%;
+  height: 2px;
+  background: linear-gradient(90deg, #4f7cff, #6fa3ff);
+  border-radius: 2px;
+  transform: translateX(-50%);
+  transition: width 0.25s ease;
+}
+
+.mp-stat-clickable:hover::after {
+  width: 60%;
+}

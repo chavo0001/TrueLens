@@ -29,6 +29,8 @@ const UserProfile = () => {
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef(null);
   const [likesTotal, setLikesTotal] = useState(null);
+  const [followersCount, setFollowersCount] = useState(null);
+  const [isFollowing, setIsFollowing] = useState(false);
 
   const loadProfile = async () => {
     const res = await fetch(`http://localhost:5001/api/users/${profileUserId}`, {
@@ -69,6 +71,13 @@ const UserProfile = () => {
          loadMe(),
          loadLikesTotal(),
         ]);
+        const [followers, followStatus] = await Promise.all([
+          fetch(`/api/users/${profileUserId}/followers-count`).then(r=>r.json()),
+          fetch(`/api/users/${profileUserId}/follow-status`, { credentials:"include" }).then(r=>r.json())
+           ]);
+
+        setFollowersCount(followers.followersCount);
+        setIsFollowing(followStatus.following);
 
          setLikesTotal(likesData);
 
@@ -169,7 +178,7 @@ const UserProfile = () => {
     }
   };
 
-  // ---------- TOGGLE LIKE ----------
+  // ---------- TOGGLE ----------
   const handleToggleLike = async (photoId) => {
     try {
       const res = await apiFetch(`/api/photos/${photoId}/like`, { method: "POST" });
@@ -187,6 +196,13 @@ const UserProfile = () => {
       console.error(err);
     }
   };
+   const handleToggleFollow = async () => {
+   const res = await apiFetch(`/api/users/${profileUserId}/follow`, { method:"POST" });
+   const data = await res.json();
+
+   setIsFollowing(data.following);
+   setFollowersCount(c => c + (data.following ? 1 : -1));
+ };
 
   // ---------- STATES ----------
   if (loading) {
@@ -213,19 +229,23 @@ const UserProfile = () => {
 
   return (
     <div className="page">
-      <ProfileLayout
-        profileUser={user}
-        photos={photos}
-        isMe={isMine}
-        likesTotal={likesTotal}
-        onOpenUpload={isMine ? openUpload : null} 
-        onOpenDeleteMenu={(photoId) =>
-          setMenuOpenFor((cur) => (cur === photoId ? null : photoId))
-        }
-        menuOpenFor={menuOpenFor}
-        onRequestDelete={(photo) => setConfirmDelete(photo)}
-        onToggleLike={handleToggleLike}
-      />
+     <ProfileLayout
+  profileUser={user}
+  photos={photos}
+  isMe={isMine}
+  likesTotal={likesTotal}
+  followersCount={followersCount}
+  isFollowing={isFollowing}
+  onToggleFollow={handleToggleFollow}
+  onOpenUpload={isMine ? openUpload : null}
+  onOpenDeleteMenu={(photoId) =>
+    setMenuOpenFor((cur) => (cur === photoId ? null : photoId))
+  }
+  menuOpenFor={menuOpenFor}
+  onRequestDelete={(photo) => setConfirmDelete(photo)}
+  onToggleLike={handleToggleLike}
+/>
+
 
       {/* UPLOAD MODAL (solo se isMine) */}
       {isMine && uploadOpen && (
