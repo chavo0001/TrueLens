@@ -313,7 +313,9 @@ app.post("/api/login", async (req, res) => {
       `
       SELECT id, email, username, password, avatar, bio, confirmed
       FROM users
-      WHERE email = $1 OR username = $1
+      WHERE LOWER(email) = LOWER($1)
+      OR LOWER(username) = LOWER($1)
+
       LIMIT 1
       `,
       [loginId]
@@ -809,18 +811,37 @@ app.get("/api/users/:id/follow-status", requireSession, async (req, res) => {
 
 app.get("/api/users/:id/followers", async (req, res) => {
   const userId = Number(req.params.id);
-  if (!userId) return res.status(400).json({ error: "Invalid user id" });
+  if (!Number.isInteger(userId)) return res.status(400).json({ error: "Invalid user id" });
+
+  // viewer = utente loggato (se c'è)
+  const viewerId = req.user?.id || req.session?.user?.id || null;
+
 
   try {
+    // Lista followers del profilo userId
+    // + isFollowing: se viewerId segue quel follower (utile per mostrare Follow/Following nella lista)
     const r = await pool.query(
       `
-      SELECT u.id, u.username, u.avatar
+      SELECT 
+        u.id,
+        u.username,
+        u.avatar,
+        CASE 
+          WHEN $2::int IS NULL THEN false
+          WHEN u.id = $2::int THEN false
+          ELSE EXISTS (
+            SELECT 1
+            FROM followers f2
+            WHERE f2.follower_id = $2::int
+              AND f2.following_id = u.id
+          )
+        END AS "isFollowing"
       FROM followers f
       JOIN users u ON u.id = f.follower_id
       WHERE f.following_id = $1
       ORDER BY f.created_at DESC
       `,
-      [userId]
+      [userId, viewerId]
     );
 
     res.json({ followers: r.rows });
@@ -829,6 +850,7 @@ app.get("/api/users/:id/followers", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
 
 // Cerca utenti che hanno almeno 1 foto
 app.get("/api/users/search", async (req, res) => {

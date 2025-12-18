@@ -61,9 +61,7 @@ const Navbar = ({ isSidebarOpen, toggleSidebar }) => {
         <div className="links">
           {!user ? (
             <>
-              <Link to="/" className="nav-link">
-                Home
-              </Link>
+            
               <Link to="/login" className="login-link">
                 Login
               </Link>
@@ -73,9 +71,7 @@ const Navbar = ({ isSidebarOpen, toggleSidebar }) => {
             </>
           ) : (
             <>
-              <Link to="/" className="nav-link">
-                Home
-              </Link>
+              
 
               <div className="profile-dropdown-wrapper" ref={dropdownRef}>
                 <div
