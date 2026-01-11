@@ -139,7 +139,7 @@ export default function SettingsProfile() {
       </div>
 
       <div style={{ marginBottom: 12 }}>
-        <label>Bio (max 180)</label>
+        <label>Bio</label>
         <textarea
           value={bio}
           onChange={(e) => setBio(e.target.value)}

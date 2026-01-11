@@ -753,6 +753,7 @@ app.post("/api/users/:id/follow", requireSession, async (req, res) => {
       [followerId, followingId]
     );
 
+    // unfollow
     if (exists.rowCount > 0) {
       await pool.query(
         `DELETE FROM followers WHERE follower_id=$1 AND following_id=$2`,
@@ -761,9 +762,26 @@ app.post("/api/users/:id/follow", requireSession, async (req, res) => {
       return res.json({ following: false });
     }
 
+    // follow
     await pool.query(
       `INSERT INTO followers (follower_id, following_id) VALUES ($1,$2)`,
       [followerId, followingId]
+    );
+
+    // registra evento follow 
+     await pool.query(
+      `
+      INSERT INTO follow_events (user_id, follower_id)
+      SELECT $1, $2
+      WHERE NOT EXISTS (
+        SELECT 1
+        FROM follow_events
+        WHERE user_id = $1
+          AND follower_id = $2
+          AND created_at > now()  
+      )
+      `,
+      [followingId, followerId]
     );
 
     return res.json({ following: true });
@@ -772,6 +790,7 @@ app.post("/api/users/:id/follow", requireSession, async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
 
 //conta followers
 app.get("/api/users/:id/followers-count", async (req, res) => {
@@ -850,7 +869,105 @@ app.get("/api/users/:id/followers", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+//notifiche follow
+app.get("/api/notifications/follow-events", requireSession, async (req, res) => {
+  const userId = req.user.id;
+  const afterId = Number(req.query.afterId || 0);
 
+  try {
+    const eventsRes = await pool.query(
+      `
+      SELECT
+        fe.id,
+        fe.created_at,
+        u.id AS follower_id,
+        u.username,
+        u.avatar
+      FROM follow_events fe
+      JOIN users u ON u.id = fe.follower_id
+      WHERE fe.user_id = $1
+        AND fe.id > $2
+      ORDER BY fe.id ASC
+      LIMIT 20
+      `,
+      [userId, afterId]
+    );
+
+    const events = eventsRes.rows;
+    const latestId = events.length
+      ? events[events.length - 1].id
+      : afterId;
+
+    res.json({ events, latestId });
+  } catch (err) {
+    console.error("follow events error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+//caso di follow non visto (perchè offline)
+app.get("/api/notifications/unseen-followers", requireSession, async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const userRes = await pool.query(
+      `SELECT last_followers_seen_at FROM users WHERE id = $1`,
+      [userId]
+    );
+
+    const lastSeen = userRes.rows[0]?.last_followers_seen_at || new Date(0);
+
+    const countRes = await pool.query(
+      `
+      SELECT COUNT(DISTINCT follower_id)::int AS count
+      FROM follow_events
+      WHERE user_id = $1
+        AND created_at > $2
+      `,
+      [userId, lastSeen]
+    );
+
+    res.json({ count: countRes.rows[0].count });
+  } catch (err) {
+    console.error("unseen followers error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+// segna follow visti
+app.post("/api/notifications/mark-followers-seen", requireSession, async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    await pool.query(
+      `UPDATE users
+       SET last_followers_seen_at = now()
+       WHERE id = $1`,
+      [userId]
+    );
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("mark followers seen error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.get("/api/notifications/latest-follow-event-id", requireSession, async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const r = await pool.query(
+      `SELECT COALESCE(MAX(id), 0)::int AS "latestId"
+       FROM follow_events
+       WHERE user_id = $1`,
+      [userId]
+    );
+
+    res.json({ latestId: r.rows[0].latestId });
+  } catch (err) {
+    console.error("latest-follow-event-id error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 
 // Cerca utenti che hanno almeno 1 foto
 app.get("/api/users/search", async (req, res) => {

@@ -1,7 +1,8 @@
- import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
 import SearchBar from "../components/SearchBar";
+import PhotoLightbox from "./PhotoLightbox.js";
 import "../styles/Home.css";
+import "../styles/PhotoLightbox.css";
 
 const HomePage = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -9,7 +10,8 @@ const HomePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const navigate = useNavigate();
+  // ✅ nuovo state: foto selezionata (apre modal)
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
 
   // ============================
   // EXPLORE: carica foto di tutti
@@ -45,23 +47,15 @@ const HomePage = () => {
 
   const handleClearSearch = () => setSearchQuery("");
 
-
   const filteredPhotos = searchQuery
-    ? photos.filter((p) =>
-        (p.username || "").toLowerCase().includes(searchQuery)
-      )
+    ? photos.filter((p) => (p.username || "").toLowerCase().includes(searchQuery))
     : photos;
 
   return (
     <>
-       
       <div className="page">
         <div className="search-bar-wrapper">
-          <SearchBar
-            value={searchQuery}
-            onChange={handleSearchChange}
-            onClear={handleClearSearch}
-          />
+          <SearchBar value={searchQuery} onChange={handleSearchChange} onClear={handleClearSearch} />
         </div>
 
         <h2 className="center-text">Explore</h2>
@@ -84,20 +78,31 @@ const HomePage = () => {
         ) : (
           <div className="photo-grid">
             {filteredPhotos.map((p) => (
-              <div className="photo-tile" key={p.id} onClick={() => navigate(`/user/${p.user_id}`)}>
+              <button
+                key={p.id}
+                type="button"
+                className="photo-tile"
+                onClick={() => setSelectedPhoto(p)}
+              >
                 <img
                   src={`http://localhost:5001${p.file_path}`}
                   alt={p.username || "photo"}
                   loading="lazy"
                 />
-                <div className="photo-meta">
-                  @{p.username || "user"}
-                </div>
-              </div>
+                <div className="photo-meta">@{p.username || "user"}</div>
+              </button>
             ))}
           </div>
         )}
       </div>
+
+    {/*Lightbox*/}
+      {selectedPhoto && (
+        <PhotoLightbox
+          photo={selectedPhoto}
+          onClose={() => setSelectedPhoto(null)}
+        />
+      )}
     </>
   );
 };
