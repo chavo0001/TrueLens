@@ -23,13 +23,15 @@ const ProfileLayout = ({
 
   // likes
   onToggleLike = null,
+
+  // ✅ lightbox
+  onOpenPhoto = null,
 }) => {
   const navigate = useNavigate();
 
-  const avatarUrl =
-    profileUser?.avatar
-      ? `http://localhost:5001${profileUser.avatar}`
-      : "/default-avatar.jpg";
+  const avatarUrl = profileUser?.avatar
+    ? `http://localhost:5001${profileUser.avatar}`
+    : "/default-avatar.jpg";
 
   const username = profileUser?.username || "user";
   const photoCount = photos.length;
@@ -51,7 +53,10 @@ const ProfileLayout = ({
                   <button className="mp-btn" onClick={() => navigate("/settings/profile")}>
                     Edit profile
                   </button>
-                  <button className="mp-btn mp-btn-ghost" onClick={() => navigate("/settings/security")}>
+                  <button
+                    className="mp-btn mp-btn-ghost"
+                    onClick={() => navigate("/settings/security")}
+                  >
                     Security
                   </button>
                   <button
@@ -80,15 +85,14 @@ const ProfileLayout = ({
               <div
                 className="mp-stat mp-stat-clickable"
                 onClick={() =>
-                isMe
-                ? navigate("/me/followers")
-                : navigate(`/user/${profileUser.id}/followers`)
-              }
-             >
-              <span className="mp-stat-num">{followersCount ?? "—"}</span>
-              <span className="mp-stat-label">followers</span>
-       </div>
-
+                  isMe
+                    ? navigate("/me/followers")
+                    : navigate(`/user/${profileUser.id}/followers`)
+                }
+              >
+                <span className="mp-stat-num">{followersCount ?? "—"}</span>
+                <span className="mp-stat-label">followers</span>
+              </div>
 
               <div className="mp-stat">
                 <span className="mp-stat-num">{likesTotal ?? "—"}</span>
@@ -106,21 +110,39 @@ const ProfileLayout = ({
         <div className="mp-gallery">
           <div className="mp-grid">
             {photos.map((p) => (
-              <div key={p.id} className="mp-tile">
+              <div
+                key={p.id}
+                className="mp-tile"
+                role="button"
+                tabIndex={0}
+                onClick={() => onOpenPhoto && onOpenPhoto(p)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") onOpenPhoto && onOpenPhoto(p);
+                }}
+              >
                 {isMe && (
                   <div className="mp-photo-actions">
                     <button
                       className="mp-photo-dots"
-                      onClick={() => onOpenDeleteMenu && onOpenDeleteMenu(p.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenDeleteMenu && onOpenDeleteMenu(p.id);
+                      }}
                     >
                       •••
                     </button>
 
                     {menuOpenFor === p.id && (
-                      <div className="mp-photo-menu">
+                      <div
+                        className="mp-photo-menu"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <button
                           className="mp-photo-menu-item mp-danger"
-                          onClick={() => onRequestDelete && onRequestDelete(p)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRequestDelete && onRequestDelete(p);
+                          }}
                         >
                           Delete photo
                         </button>
@@ -133,11 +155,16 @@ const ProfileLayout = ({
                   className="mp-img"
                   src={`http://localhost:5001${p.file_path}`}
                   alt=""
+                  loading="lazy"
+                  decoding="async"
                 />
 
                 <button
                   className={`like-badge ${p.likedByMe ? "liked" : ""}`}
-                  onClick={() => onToggleLike && onToggleLike(p.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleLike && onToggleLike(p.id);
+                  }}
                 >
                   ❤️ {p.likesCount ?? 0}
                 </button>

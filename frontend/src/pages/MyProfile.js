@@ -2,30 +2,31 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../api/apiFetch";
 import ProfileLayout from "./ProfileLayout";
+import PhotoLightbox from "./PhotoLightbox";
 
 const MyProfile = () => {
   const navigate = useNavigate();
 
   const [me,setMe] = useState(null);
-  const [profile, setProfile] = useState(null); // { user, photos }
+  const [profile, setProfile] = useState(null); 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [likesTotal, setLikesTotal] = useState(null);
 
-  // Upload modal
+  // Upload 
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef(null);
   const [followersCount, setFollowersCount] = useState(null);
 
-  // 3 dots menu + delete confirm modal
-  const [menuOpenFor, setMenuOpenFor] = useState(null); // photoId | null
-  const [confirmDelete, setConfirmDelete] = useState(null); // photo object | null
+  // 3 puntini menu + cancellazione foto
+  const [menuOpenFor, setMenuOpenFor] = useState(null); 
+  const [confirmDelete, setConfirmDelete] = useState(null); 
   const [deleting, setDeleting] = useState(false);
-
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
   const photos = useMemo(() => profile?.photos || [], [profile]);
 
-  // close dropdown on outside click
+  // si chiude dropdown cliccando fuori
   useEffect(() => {
     function onDocClick(e) {
       const menu = document.querySelector(".mp-photo-menu");
@@ -186,7 +187,7 @@ const MyProfile = () => {
     }
   };
 
-  // (optional) toggle like – lo attiviamo quando il backend torna likesCount/likedByMe
+
   const handleToggleLike = async (photoId) => {
     try {
       const res = await apiFetch(`/api/photos/${photoId}/like`, { method: "POST" });
@@ -253,9 +254,32 @@ const MyProfile = () => {
         }
         menuOpenFor={menuOpenFor}
         onRequestDelete={requestDelete}
-        onToggleLike={handleToggleLike} // se ancora non hai likes nel payload, non succede nulla di grave (mostrerà 0)
+        onToggleLike={handleToggleLike} 
+        onOpenPhoto={(p) => setSelectedPhoto(p)}
       />
+      {selectedPhoto && (
+  <PhotoLightbox
+    photo={selectedPhoto}
+    onClose={() => setSelectedPhoto(null)}
+    onPhotoUpdate={(photoId, patch) => {
+      // aggiorna griglia
+      setProfile((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          photos: (prev.photos || []).map((ph) =>
+            ph.id === photoId ? { ...ph, ...patch } : ph
+          ),
+        };
+      });
 
+      // aggiorna lightbox
+      setSelectedPhoto((cur) =>
+        cur && cur.id === photoId ? { ...cur, ...patch } : cur
+      );
+    }}
+  />
+)}
       {/* UPLOAD MODAL */}
       {uploadOpen && (
         <div className="mp-modal-backdrop" onMouseDown={closeUpload}>
