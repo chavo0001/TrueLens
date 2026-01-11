@@ -695,7 +695,7 @@ const filePath = `/uploads/${finalFilename}`;
         inserted.push(photoRow);
 
         // 2) Estrai EXIF dal file fisico
-
+        
         let exif = null;
         try {
           exif = await exifr.parse(absPath, {

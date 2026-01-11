@@ -1,14 +1,13 @@
-/* Home.css */
+/*home*/
 
-/* Impostazioni globali per il layout della pagina */
 html, body {
   height: 100%;   
   margin: 0;
   padding: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  background-color: #fae1e1; /* sfondo scuro neutro */
-  color: #000000; /* testo chiaro ma non bianco puro */
+  background-color: #ffffff; 
+  color: #000000; 
   font-family: 'Poppins', sans-serif;
 }
 
@@ -23,29 +22,27 @@ body {
 ========================= */
 
 .photo-tile {
-  position: relative;
-  border-radius: 16px;
-  overflow: hidden;
-  background-color: #ffffff;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-  cursor: pointer;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
 
-  height: auto;
-  display: block;
-
-  transition: box-shadow 0.2s ease;
+  border-radius: 0;     
+  padding: 0;
 }
+
 
 .photo-tile:hover {
   box-shadow: 0 6px 22px rgba(0,0,0,0.18);
 }
 
 .photo-tile .photo-img {
+  display: block;
   width: 100%;
   height: auto;
-  display: block;
-  object-fit: contain;
+  object-fit: cover;   
+  background: transparent;
 }
+
 
 .photo-tile:hover .photo-img {
   opacity: 0.9;
@@ -104,13 +101,14 @@ body {
 }
 
 .dropdown-item:hover {
-  background-color: #4d8bce22; /* blu trasparente */
+  background-color: #4d8bce22; 
   transform: scale(1.03);
   border: 1px solid #007bff;
 }
 
 /* Search container */
 .search-container {
+  color: #080505;
   position: relative;
   width: 40%;
   transition: transform 0.2s ease;
@@ -121,7 +119,6 @@ body {
   transform: scale(1.02);
 }
 
-/* Pulsante (lasciato invariato) */
 .creatorButton {
   max-width: 250px;
   width: fit-content;
