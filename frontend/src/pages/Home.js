@@ -85,11 +85,23 @@ const HomePage = () => {
                 onClick={() => setSelectedPhoto(p)}
               >
                 <img
+                  className="photo-img"
                   src={`http://localhost:5001${p.file_path}`}
                   alt={p.username || "photo"}
                   loading="lazy"
                 />
-                <div className="photo-meta">@{p.username || "user"}</div>
+      <div className="photo-meta-min">
+  <img
+    src={p.avatar ? `http://localhost:5001${p.avatar}` : "/default-avatar.jpg"}
+    alt=""
+    className="photo-meta-avatar-min"
+  />
+  <span className="photo-meta-username-min">
+    @{p.username || "user"}
+  </span>
+</div>
+
+
               </button>
             ))}
           </div>

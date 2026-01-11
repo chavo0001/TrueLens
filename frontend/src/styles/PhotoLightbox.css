@@ -137,3 +137,62 @@
   border: 1px solid rgba(255, 90, 120, 0.55);
   background: rgba(255, 90, 120, 0.12);
 }
+
+.tl-lightbox-body{
+  display: flex;
+  width: 100%;
+  height: calc(100% - 70px); /* lascia spazio alla barra sotto */
+}
+
+.tl-lightbox-media{
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.tl-lightbox-info{
+  width: 320px;
+  flex: 0 0 320px;
+  background: rgba(0,0,0,0.55);
+  border-left: 1px solid rgba(255,255,255,0.08);
+  padding: 18px 16px;
+  color: rgba(255,255,255,0.92);
+  overflow: auto;
+}
+
+.tl-info-title{
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 40px;
+}
+
+.tl-info-muted{
+  opacity: 0.75;
+  font-size: 14px;
+}
+
+.tl-info-list{
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.tl-info-row{
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.tl-info-row span:first-child{
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
+.tl-info-row span:last-child{
+  text-align: right;
+  word-break: break-word;
+}

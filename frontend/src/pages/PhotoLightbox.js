@@ -7,9 +7,11 @@ const API_BASE = "http://localhost:5001";
 const PhotoLightbox = ({ photo, onClose, onPhotoUpdate }) => {
   const navigate = useNavigate();
 
-  // stato locale per UI immediata (così il click funziona sempre)
   const [likedByMe, setLikedByMe] = useState(!!photo?.likedByMe);
   const [likesCount, setLikesCount] = useState(Number(photo?.likesCount ?? 0));
+
+  const [exif, setExif] = useState(null);
+  const [exifLoading, setExifLoading] = useState(false);
 
   useEffect(() => {
     setLikedByMe(!!photo?.likedByMe);
@@ -30,7 +32,40 @@ const PhotoLightbox = ({ photo, onClose, onPhotoUpdate }) => {
     };
   }, [onClose]);
 
-  const imgSrc = photo?.file_path ? `${API_BASE}${photo.file_path}` : "/default-avatar.jpg";
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadExif() {
+      if (!photo?.id) {
+        setExif(null);
+        return;
+      }
+
+      setExifLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/api/photos/${photo.id}/exif`, {
+          credentials: "include",
+        });
+        const data = await res.json().catch(() => ({}));
+        if (cancelled) return;
+
+        setExif(data?.exif ?? null);
+      } catch (e) {
+        if (!cancelled) setExif(null);
+      } finally {
+        if (!cancelled) setExifLoading(false);
+      }
+    }
+
+    loadExif();
+    return () => {
+      cancelled = true;
+    };
+  }, [photo?.id]);
+
+  const imgSrc = photo?.file_path
+    ? `${API_BASE}${photo.file_path}`
+    : "/default-avatar.jpg";
 
   const avatarSrc =
     photo?.avatar && photo.avatar !== "null"
@@ -55,11 +90,9 @@ const PhotoLightbox = ({ photo, onClose, onPhotoUpdate }) => {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) return;
 
-      // aggiorna UI locale
       setLikedByMe(!!data.liked);
       setLikesCount(Number(data.likesCount ?? likesCount));
 
-      // opzionale: aggiorna anche lo state nel parent (Home) se glielo passi
       if (typeof onPhotoUpdate === "function") {
         onPhotoUpdate(photo.id, {
           likedByMe: !!data.liked,
@@ -71,6 +104,19 @@ const PhotoLightbox = ({ photo, onClose, onPhotoUpdate }) => {
     }
   };
 
+  const formatFNumber = (v) => (v ? `f/${Number(v).toFixed(1)}` : "—");
+  const formatFocal = (v) => (v ? `${Number(v)} mm` : "—");
+  const formatISO = (v) => (v ? `ISO ${Number(v)}` : "—");
+  const formatExposure = (v) => (v ? String(v) : "—");
+
+  const hasAnyExif =
+    exif &&
+    Object.values(exif).some((v) => v !== null && v !== undefined && v !== "");
+
+  const cameraText = exif
+    ? [exif.camera_make, exif.camera_model].filter(Boolean).join(" ")
+    : "";
+
   return (
     <div className="tl-lightbox" onMouseDown={onClose}>
       <div className="tl-lightbox-inner" onMouseDown={(e) => e.stopPropagation()}>
@@ -78,10 +124,64 @@ const PhotoLightbox = ({ photo, onClose, onPhotoUpdate }) => {
           ✕
         </button>
 
-        <div className="tl-lightbox-media">
-          <img className="tl-lightbox-img" src={imgSrc} alt={photo?.username || "photo"} />
+        {/* immagine + sidebar */}
+        <div className="tl-lightbox-body">
+          <div className="tl-lightbox-media">
+            <img
+              className="tl-lightbox-img"
+              src={imgSrc}
+              alt={photo?.username || "photo"}
+            />
+          </div>
+
+          <aside
+            className="tl-lightbox-info"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="tl-info-title">Shot Details</div>
+
+            {exifLoading ? (
+              <div className="tl-info-muted">Loading EXIF...</div>
+            ) : !hasAnyExif ? (
+              <div className="tl-info-muted">EXIF not visible</div>
+            ) : (
+              <div className="tl-info-list">
+                <div className="tl-info-row">
+                  <span>Camera</span>
+                  <span>{cameraText || "—"}</span>
+                </div>
+
+                <div className="tl-info-row">
+                  <span>Lens</span>
+                  <span>{exif.lens_model || "—"}</span>
+                </div>
+
+                <div className="tl-info-row">
+                  <span>Aperture</span>
+                  <span>{formatFNumber(exif.f_number)}</span>
+                </div>
+
+                <div className="tl-info-row">
+                  <span>Shutter Speed</span>
+                  <span>{formatExposure(exif.exposure_time)}</span>
+                </div>
+
+                <div className="tl-info-row">
+                  <span>ISO</span>
+                  <span>{formatISO(exif.iso)}</span>
+                </div>
+
+                <div className="tl-info-row">
+                  <span>Focal lenght</span>
+                  <span>{formatFocal(exif.focal_length_mm)}</span>
+                </div>
+
+              </div>
+            )}
+          </aside>
         </div>
 
+        {/* ✅ barra sotto invariata */}
         <div className="tl-lightbox-bar">
           <button type="button" className="tl-lightbox-user" onClick={goToProfile}>
             <img className="tl-lightbox-user-avatar" src={avatarSrc} alt="" />

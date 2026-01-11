@@ -40,7 +40,7 @@ body {
   box-shadow: 0 6px 30px rgba(0,123,255,0.4);
 }
 
-.photo-tile img {
+.photo-tile .photo-img {
   position: absolute;
   top: 0;
   left: 0;
@@ -52,26 +52,50 @@ body {
   display: block;
 }
 
-.photo-tile:hover img {
+.photo-tile:hover .photo-img {
   opacity: 0.9;
 }
 
-/* Overlay nome utente */
-.photo-meta {
-  position: relative;
-  z-index: 1;
-  background: rgba(0, 0, 0, 0.55);
-  color: #fff;
-  padding: 16px;
-  text-align: center;
-  font-weight: 600;
-  font-size: 1.1rem;
-  border-bottom-left-radius: 16px;
-  border-bottom-right-radius: 16px;
-  backdrop-filter: blur(6px);
+
+/* username + avatar in basso a sinistra */
+.photo-meta-min {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  z-index: 2;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 0;              
+  background: transparent; 
 }
 
-/* Pulsanti dentro tile (es. like o sub) */
+/* avatar piccolo */
+.photo-meta-avatar-min {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+
+  
+  border: 1px solid rgba(255,255,255,0.7);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+}
+
+
+.photo-meta-username-min {
+  color: rgba(255,255,255,0.95);
+  font-size: 0.95rem;
+  font-weight: 700;
+
+ 
+  text-shadow: 0 2px 8px rgba(0,0,0,0.7);
+}
+
+
+
 .card-actions {
   display: flex;
   justify-content: space-between;

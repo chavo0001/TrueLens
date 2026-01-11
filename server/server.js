@@ -614,7 +614,7 @@ app.post(
     const userId = req.user.id;
 
     try {
-      // ✅ accetta sia "photo" che "photos"
+      
       const files = [
         ...(req.files?.photo || []),
         ...(req.files?.photos || []),
@@ -813,6 +813,30 @@ app.delete("/api/me/photos/:photoId", requireSession, async (req, res) => {
   } catch (err) {
     console.error("DELETE /api/me/photos error:", err);
     return res.status(500).json({ error: "Server error" });
+  }
+});
+
+//mostra dati exif delle foto (f, tempo, ISO ecc)
+app.get("/api/photos/:photoId/exif", async (req, res) => {
+  const photoId = Number(req.params.photoId);
+  if (!photoId) return res.status(400).json({ error: "Invalid photoId" });
+
+  try {
+    const r = await pool.query(
+      `SELECT photo_id, camera_make, camera_model, lens_model,
+              f_number, exposure_time, iso, focal_length_mm,
+              width_px, height_px
+       FROM photo_exif
+       WHERE photo_id = $1`,
+      [photoId]
+    );
+
+    if (!r.rows.length) return res.json({ exif: null });
+
+    return res.json({ exif: r.rows[0] });
+  } catch (err) {
+    console.error("EXIF fetch error:", err);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
