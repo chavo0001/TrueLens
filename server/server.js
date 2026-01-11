@@ -12,8 +12,6 @@
 const path = require("path");
 const fs = require("fs");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
-
-// (optional) prevent MaxListeners warnings during dev
 require("events").EventEmitter.defaultMaxListeners = 20;
 
 /* ================================
@@ -22,10 +20,8 @@ require("events").EventEmitter.defaultMaxListeners = 20;
 const express = require("express");
 const morgan = require("morgan");
 const cors = require("cors");
-
 const session = require("express-session");
 const pgSession = require("connect-pg-simple")(session);
-
 const { Pool } = require("pg");
 const bcrypt = require("bcryptjs");
 const nodemailer = require("nodemailer");
@@ -49,7 +45,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// CORS (cookie sessions)
+// CORS (sessioni cookie)
 app.use(
   cors({
     origin: process.env.FRONTEND_ORIGIN || "http://localhost:3000",
@@ -79,7 +75,7 @@ pool
   });
 
 /* ================================
-   04.1) DB - PATCH SCHEMA (DEV-FRIENDLY)
+   04.1) DB aggiunge colonne se mancano
    ================================ */
 
 async function ensureUsersSchema() {
@@ -141,7 +137,7 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Per l'upload del portfolio (massimo 40 immmagini)
+// Per l'upload del portfolio
 const portfolioStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, path.join(__dirname, "uploads")),
   filename: (req, file, cb) => {
@@ -175,7 +171,7 @@ const transporter = nodemailer.createTransport({
 });
 
 /* ================================
-   08) HEALTH
+   08) TEST 
    ================================ */
 app.get("/api/ping", (req, res) => res.json({ ok: true, port }));
 
@@ -348,7 +344,7 @@ app.post("/api/login", async (req, res) => {
 
     return res.json({
       ok: true,
-      user: req.session.user, // ✅ ritorniamo lo stesso oggetto salvato in sessione
+      user: req.session.user,
     });
   } catch (err) {
     console.error("login error:", err);
@@ -477,7 +473,7 @@ app.post("/api/me/avatar", requireSession, uploadAvatar.single("avatar"), async 
   if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
   try {
-    // opzionale: elimina avatar vecchio dal disco
+    // elimina avatar vecchio dal disco
     const prev = await pool.query("SELECT avatar FROM users WHERE id=$1", [userId]);
     const oldAvatar = prev.rows[0]?.avatar; // es: "/uploads/avatars/xxx.jpg"
 
@@ -506,7 +502,7 @@ app.post("/api/me/avatar", requireSession, uploadAvatar.single("avatar"), async 
 });
 
 /* ================================
-   10) PORTFOLIO / UPLOAD (collegato a user) + Likes
+   10) PORTFOLIO / UPLOAD (collegato a user) + likes
    ================================ */
 async function ensureUserImagesTable() {
   try {
@@ -652,7 +648,7 @@ app.delete("/api/me/photos/:photoId", requireSession, async (req, res) => {
     try {
       await fs.promises.unlink(absPath);
     } catch (err) {
-      // non blocchiamo la delete DB se il file non esiste 
+      // non blocca la delete DB se il file non esiste 
       console.warn("File delete warning:", err.message, "absPath:", absPath);
     }
 
