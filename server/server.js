@@ -27,6 +27,7 @@ const bcrypt = require("bcryptjs");
 const nodemailer = require("nodemailer");
 const { v4: uuidv4 } = require("uuid");
 const multer = require("multer");
+const exifr = require("exifr");
 
 /* ================================
    02) APP
@@ -550,28 +551,183 @@ async function ensurePhotoLikesTable() {
 }
 ensurePhotoLikesTable();
 
-// Upload portfolio (user loggato)
+//mostra i dati Exif delle foto postate
+async function ensurePhotoExifTable() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS photo_exif (
+        photo_id INTEGER PRIMARY KEY REFERENCES user_images(id) ON DELETE CASCADE,
+
+        camera_make TEXT,
+        camera_model TEXT,
+        lens_model TEXT,
+
+        f_number NUMERIC,
+        exposure_time TEXT,
+        iso INTEGER,
+        focal_length_mm NUMERIC,
+
+        width_px INTEGER,
+        height_px INTEGER,
+
+        created_at TIMESTAMPTZ DEFAULT now()
+      );
+    `);
+  } catch (err) {
+    console.error("❌ Errore creazione tabella photo_exif:", err.message);
+  }
+}
+ensurePhotoExifTable();
+
+function formatExposureTime(exposureTime) {
+  if (!exposureTime) return null;
+
+  if (typeof exposureTime === "string") return exposureTime;
+
+  if (typeof exposureTime === "number") {
+    if (exposureTime >= 1) return `${exposureTime}s`;
+
+    const denom = Math.round(1 / exposureTime);
+    if (denom > 0) return `1/${denom}`;
+  }
+
+  return String(exposureTime);
+}
+
+function toNumberOrNull(v) {
+  if (v === undefined || v === null) return null;
+  if (typeof v === "number") return v;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+
+// Upload portfolio (user loggato) + dati Exif delle foto postate
 app.post(
   "/api/me/photos",
   requireSession,
-  uploadPortfolio.array("photos", 40),
+  uploadPortfolio.fields([
+    { name: "photo", maxCount: 40 },
+    { name: "photos", maxCount: 40 },
+  ]),
   async (req, res) => {
-    try {
-      const userId = req.user.id;
+    const userId = req.user.id;
 
-      const files = req.files || [];
-      if (!files.length) return res.status(400).json({ error: "No files uploaded" });
+    try {
+      // ✅ accetta sia "photo" che "photos"
+      const files = [
+        ...(req.files?.photo || []),
+        ...(req.files?.photos || []),
+      ];
+
+      if (!files.length) {
+        return res.status(400).json({ error: "No files uploaded" });
+      }
 
       const inserted = [];
+
       for (const f of files) {
         const filePath = `/uploads/${f.filename}`;
+
+        // 1) Inserisci foto
         const r = await pool.query(
           `INSERT INTO user_images (user_id, file_path)
            VALUES ($1,$2)
            RETURNING id, user_id, file_path, created_at`,
           [userId, filePath]
         );
-        inserted.push(r.rows[0]);
+
+        const photoRow = r.rows[0];
+        inserted.push(photoRow);
+
+        // 2) Estrai EXIF dal file fisico
+        const absPath = path.join(__dirname, "uploads", f.filename);
+
+        let exif = null;
+        try {
+          exif = await exifr.parse(absPath, {
+            // camera / lens
+            make: true,
+            model: true,
+            lensModel: true,
+
+            // scatto
+            fNumber: true,
+            exposureTime: true,
+            iso: true,
+            focalLength: true,
+
+            // dimensioni
+            ExifImageWidth: true,
+            ExifImageHeight: true,
+            ImageWidth: true,
+            ImageHeight: true,
+          });
+          console.log("EXIF KEYS:", exif ? Object.keys(exif) : exif);
+          console.log("EXIF SAMPLE:", exif);
+
+        } catch (e) {
+          exif = null;
+        }
+
+        // 3) Salva EXIF (solo se c'è qualcosa di utile)
+       if (exif) {
+  const width = exif.ExifImageWidth ?? exif.ImageWidth ?? exif.Width ?? null;
+  const height = exif.ExifImageHeight ?? exif.ImageHeight ?? exif.Height ?? null;
+
+  const payload = {
+    camera_make: exif.Make ?? null,
+    camera_model: exif.Model ?? null,
+    lens_model: exif.LensModel ?? null,
+
+    f_number: toNumberOrNull(exif.FNumber),
+    exposure_time: formatExposureTime(exif.ExposureTime),
+    iso: exif.ISO ?? null,
+    focal_length_mm: toNumberOrNull(exif.FocalLength),
+
+    width_px: width ? Number(width) : null,
+    height_px: height ? Number(height) : null,
+  };
+
+  const hasAnyExif = Object.values(payload).some(
+    (v) => v !== null && v !== undefined && v !== ""
+  );
+
+  if (hasAnyExif) {
+    await pool.query(
+      `
+      INSERT INTO photo_exif
+        (photo_id, camera_make, camera_model, lens_model,
+         f_number, exposure_time, iso, focal_length_mm,
+         width_px, height_px)
+      VALUES
+        ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      ON CONFLICT (photo_id) DO UPDATE SET
+        camera_make = EXCLUDED.camera_make,
+        camera_model = EXCLUDED.camera_model,
+        lens_model = EXCLUDED.lens_model,
+        f_number = EXCLUDED.f_number,
+        exposure_time = EXCLUDED.exposure_time,
+        iso = EXCLUDED.iso,
+        focal_length_mm = EXCLUDED.focal_length_mm,
+        width_px = EXCLUDED.width_px,
+        height_px = EXCLUDED.height_px
+      `,
+      [
+        photoRow.id,
+        payload.camera_make,
+        payload.camera_model,
+        payload.lens_model,
+        payload.f_number,
+        payload.exposure_time,
+        payload.iso,
+        payload.focal_length_mm,
+        payload.width_px,
+        payload.height_px,
+      ]
+    );
+  }
+}
       }
 
       res.json({ ok: true, count: inserted.length, uploaded: inserted });
@@ -581,6 +737,7 @@ app.post(
     }
   }
 );
+
 
 // Leggi portfolio dell'utente loggato
 app.get("/api/me/photos", requireSession, async (req, res) => {
@@ -1063,31 +1220,32 @@ app.get("/api/explore/photos", async (req, res) => {
     const offset = Math.max(Number(req.query.offset) || 0, 0);
     const currentUserId = req.session?.user?.id || null;
 
-    const r = await pool.query(
-      `
-      SELECT
-        ui.id,
-        ui.file_path,
-        ui.created_at,
-        u.id AS user_id,
-        u.username,
-        COUNT(pl.id)::int AS "likesCount",
-        CASE
-          WHEN $3::int IS NULL THEN false
-          ELSE EXISTS (
-            SELECT 1 FROM photo_likes pl2
-            WHERE pl2.photo_id = ui.id AND pl2.user_id = $3
-          )
-        END AS "likedByMe"
-      FROM user_images ui
-      JOIN users u ON u.id = ui.user_id
-      LEFT JOIN photo_likes pl ON pl.photo_id = ui.id
-      GROUP BY ui.id, u.id
-      ORDER BY ui.created_at DESC
-      LIMIT $1 OFFSET $2
-      `,
-      [limit, offset, currentUserId]
-    );
+   const r = await pool.query(
+  `
+  SELECT
+    ui.id,
+    ui.file_path,
+    ui.created_at,
+    u.id AS user_id,
+    u.username,
+    u.avatar,
+    COUNT(pl.id)::int AS "likesCount",
+    CASE
+      WHEN $3::int IS NULL THEN false
+      ELSE EXISTS (
+        SELECT 1 FROM photo_likes pl2
+        WHERE pl2.photo_id = ui.id AND pl2.user_id = $3
+      )
+    END AS "likedByMe"
+  FROM user_images ui
+  JOIN users u ON u.id = ui.user_id
+  LEFT JOIN photo_likes pl ON pl.photo_id = ui.id
+  GROUP BY ui.id, u.id, u.avatar
+  ORDER BY ui.created_at DESC
+  LIMIT $1 OFFSET $2
+  `,
+  [limit, offset, currentUserId]
+);
 
     res.json({ photos: r.rows, limit, offset });
   } catch (err) {

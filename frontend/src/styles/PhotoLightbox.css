@@ -4,56 +4,136 @@
   background: rgba(0,0,0,0.75);
   backdrop-filter: blur(6px);
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: center;     
+  justify-content: center; 
   z-index: 9999;
+  padding: 18px;           
 }
-
 
 .tl-lightbox-inner {
   position: relative;
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
+  width: min(1400px, 95vw); 
+  height: min(92vh, 900px); 
   display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  overflow: hidden;
+
+  background: rgba(15, 15, 18, 0.92);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 20px 70px rgba(0,0,0,0.65);
+}
+
+.tl-lightbox-media {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.35);
+}
+
+.tl-lightbox-img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+
+/* close */
+.tl-lightbox-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 5;
+
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+
+  background: rgba(0,0,0,0.45);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: white;
+  cursor: pointer;
+
+  display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
-.tl-lightbox-img {
-  display: block;          
-  width: 100%;
-  height: auto;
-  max-height: 92vh;
-  object-fit: contain;
-  background: transparent; 
+
+.tl-lightbox-bar {
+  height: 70px;
+  flex: 0 0 70px;
+
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  background: rgba(15, 15, 18, 0.92);
+  border-top: 1px solid rgba(255,255,255,0.10);
+  z-index: 4;
 }
 
+/* user left */
+.tl-lightbox-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 
-.tl-lightbox-close {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 2;
-
-  width: 38px;
-  height: 38px;
+  padding: 8px 10px;
   border-radius: 999px;
 
-  background: rgba(0,0,0,0.35);
-  border: 1px solid rgba(255,255,255,0.14);
-  color: white;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+
+  color: #fff;
   cursor: pointer;
-
-  transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
-.tl-lightbox-close:hover {
-  transform: translateY(-1px);
-  opacity: 0.9;
+.tl-lightbox-user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  object-fit: cover;
 }
 
-.tl-lightbox-footer {
-  padding: 12px 14px;
-  border-top: 1px solid rgba(255,255,255,0.06);
+.tl-lightbox-user-name {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* like right */
+.tl-lightbox-like {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 10px 12px;
+  border-radius: 999px;
+
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+
+  color: #fff;
+  cursor: pointer;
+}
+
+.tl-heart {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.tl-like-count {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.tl-lightbox-like.liked {
+  border: 1px solid rgba(255, 90, 120, 0.55);
+  background: rgba(255, 90, 120, 0.12);
 }
