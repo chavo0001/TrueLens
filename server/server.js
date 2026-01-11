@@ -28,6 +28,8 @@ const nodemailer = require("nodemailer");
 const { v4: uuidv4 } = require("uuid");
 const multer = require("multer");
 const exifr = require("exifr");
+const sharp = require("sharp");
+const heicConvert = require("heic-convert");
 
 /* ================================
    02) APP
@@ -149,12 +151,23 @@ const portfolioStorage = multer.diskStorage({
 const uploadPortfolio = multer({
   storage: portfolioStorage,
   limits: { fileSize: 20 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    if (!file.mimetype || !file.mimetype.startsWith("image/")) {
-      return cb(new Error("Only images allowed"));
-    }
-    cb(null, true);
-  },
+ fileFilter: (req, file, cb) => {
+  const allowedMimeTypes = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/heic",
+    "image/heif",
+    "application/octet-stream", // ← fondamentale per iPhone
+  ];
+
+  if (!file.mimetype || !allowedMimeTypes.includes(file.mimetype)) {
+    return cb(new Error("Only images allowed"));
+  }
+
+  cb(null, true);
+},
+
 });
 
 /* ================================
@@ -627,8 +640,49 @@ app.post(
       const inserted = [];
 
       for (const f of files) {
-        const filePath = `/uploads/${f.filename}`;
+  
+let finalFilename = f.filename;
+let absPath = path.join(__dirname, "uploads", f.filename);
 
+// Se iPhone manda mimetype strano, usiamo anche l'estensione originale
+const originalExt = (path.extname(f.originalname || "") || "").toLowerCase();
+
+const isHeic =
+  f.mimetype === "image/heic" ||
+  f.mimetype === "image/heif" ||
+  originalExt === ".heic" ||
+  originalExt === ".heif";
+
+if (isHeic) {
+  try {
+    const inputBuffer = await fs.promises.readFile(absPath);
+
+    const outputBuffer = await heicConvert({
+      buffer: inputBuffer,
+      format: "JPEG",
+      quality: 0.95,
+    });
+
+    // nuovo nome file .jpg
+    finalFilename = f.filename.replace(/\.[^/.]+$/, ".jpg");
+    const finalAbsPath = path.join(__dirname, "uploads", finalFilename);
+
+    // scrivi jpg su disco
+    await sharp(outputBuffer).toFile(finalAbsPath);
+
+    // elimina heic originale
+    await fs.promises.unlink(absPath);
+
+    // aggiorna absPath per EXIF
+    absPath = finalAbsPath;
+  } catch (e) {
+    console.error("HEIC convert error:", e);
+    // se fallisce, continua con il file originale (o puoi return 400)
+  }
+}
+
+const filePath = `/uploads/${finalFilename}`;
+ 
         // 1) Inserisci foto
         const r = await pool.query(
           `INSERT INTO user_images (user_id, file_path)
@@ -641,7 +695,6 @@ app.post(
         inserted.push(photoRow);
 
         // 2) Estrai EXIF dal file fisico
-        const absPath = path.join(__dirname, "uploads", f.filename);
 
         let exif = null;
         try {

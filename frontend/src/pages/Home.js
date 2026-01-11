@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import SearchBar from "../components/SearchBar";
 import PhotoLightbox from "./PhotoLightbox.js";
 import "../styles/Home.css";
@@ -10,12 +10,11 @@ const HomePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // ✅ nuovo state: foto selezionata (apre modal)
   const [selectedPhoto, setSelectedPhoto] = useState(null);
 
-  // ============================
-  // EXPLORE: carica foto di tutti
-  // ============================
+  // ✅ ref per la griglia
+  const gridRef = useRef(null);
+
   useEffect(() => {
     async function fetchExplorePhotos() {
       try {
@@ -38,18 +37,47 @@ const HomePage = () => {
     fetchExplorePhotos();
   }, []);
 
-  // ============================
-  // SEARCH (username)
-  // ============================
-  const handleSearchChange = (e) => {
-    setSearchQuery(e.target.value.toLowerCase());
-  };
-
+  const handleSearchChange = (e) => setSearchQuery(e.target.value.toLowerCase());
   const handleClearSearch = () => setSearchQuery("");
 
   const filteredPhotos = searchQuery
     ? photos.filter((p) => (p.username || "").toLowerCase().includes(searchQuery))
     : photos;
+
+  // ✅ funzione: calcola lo span in base all'altezza tile
+  const resizeAllMasonryItems = () => {
+    const grid = gridRef.current;
+    if (!grid) return;
+
+    const rowHeight = parseInt(getComputedStyle(grid).getPropertyValue("grid-auto-rows"), 10);
+    const rowGap = parseInt(getComputedStyle(grid).getPropertyValue("gap"), 10) || 0;
+
+    const items = grid.querySelectorAll(".photo-tile");
+    items.forEach((item) => {
+      const img = item.querySelector(".photo-img");
+      if (!img) return;
+
+      // altezza totale tile (img + eventuali overlay)
+      const itemHeight = item.getBoundingClientRect().height;
+
+      const span = Math.ceil((itemHeight + rowGap) / (rowHeight + rowGap));
+      item.style.gridRowEnd = `span ${span}`;
+    });
+  };
+
+  // ✅ ricalcola quando cambiano le foto filtrate o dopo loading
+  useLayoutEffect(() => {
+    if (loading) return;
+    const id = requestAnimationFrame(resizeAllMasonryItems);
+    return () => cancelAnimationFrame(id);
+  }, [loading, filteredPhotos.length]);
+
+  // ✅ ricalcola su resize finestra
+  useEffect(() => {
+    const onResize = () => resizeAllMasonryItems();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   return (
     <>
@@ -60,9 +88,6 @@ const HomePage = () => {
 
         <h2 className="center-text">Explore</h2>
 
-        {/* ============================
-            STATES
-        ============================ */}
         {loading ? (
           <p className="center-text" style={{ padding: "2rem" }}>
             Loading photos...
@@ -76,7 +101,7 @@ const HomePage = () => {
             No photos yet. Upload your first shots 😉
           </p>
         ) : (
-          <div className="photo-grid">
+          <div className="photo-grid" ref={gridRef}>
             {filteredPhotos.map((p) => (
               <button
                 key={p.id}
@@ -89,31 +114,29 @@ const HomePage = () => {
                   src={`http://localhost:5001${p.file_path}`}
                   alt={p.username || "photo"}
                   loading="lazy"
+                  decoding="async"
+                  onLoad={() => {
+                    // quando ogni immagine finisce di caricare, ricalcola
+                    resizeAllMasonryItems();
+                  }}
                 />
-      <div className="photo-meta-min">
-  <img
-    src={p.avatar ? `http://localhost:5001${p.avatar}` : "/default-avatar.jpg"}
-    alt=""
-    className="photo-meta-avatar-min"
-  />
-  <span className="photo-meta-username-min">
-    @{p.username || "user"}
-  </span>
-</div>
 
-
+                <div className="photo-meta-min">
+                  <img
+                    src={p.avatar ? `http://localhost:5001${p.avatar}` : "/default-avatar.jpg"}
+                    alt=""
+                    className="photo-meta-avatar-min"
+                  />
+                  <span className="photo-meta-username-min">@{p.username || "user"}</span>
+                </div>
               </button>
             ))}
           </div>
         )}
       </div>
 
-    {/*Lightbox*/}
       {selectedPhoto && (
-        <PhotoLightbox
-          photo={selectedPhoto}
-          onClose={() => setSelectedPhoto(null)}
-        />
+        <PhotoLightbox photo={selectedPhoto} onClose={() => setSelectedPhoto(null)} />
       )}
     </>
   );
