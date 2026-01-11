@@ -2,19 +2,20 @@ import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { apiFetch } from "../api/apiFetch";
 import ProfileLayout from "./ProfileLayout";
+import PhotoLightbox from "./PhotoLightbox";
 
 const UserProfile = () => {
   const { id } = useParams();
   const profileUserId = Number(id);
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
 
   // menu 3 puntini + modal delete
   const [menuOpenFor, setMenuOpenFor] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
-
-  // ref per click-outside (menu puntini)
+  
+  // ref per click-outside 
   const menuRef = useRef(null);
-
   const [user, setUser] = useState(null);
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -72,8 +73,8 @@ const UserProfile = () => {
          loadLikesTotal(),
         ]);
         const [followers, followStatus] = await Promise.all([
-          fetch(`/api/users/${profileUserId}/followers-count`).then(r=>r.json()),
-          fetch(`/api/users/${profileUserId}/follow-status`, { credentials:"include" }).then(r=>r.json())
+          apiFetch(`/api/users/${profileUserId}/followers-count`).then(r=>r.json()),
+          apiFetch(`/api/users/${profileUserId}/follow-status`, { credentials:"include" }).then(r=>r.json())
            ]);
 
         setFollowersCount(followers.followersCount);
@@ -244,7 +245,27 @@ const UserProfile = () => {
   menuOpenFor={menuOpenFor}
   onRequestDelete={(photo) => setConfirmDelete(photo)}
   onToggleLike={handleToggleLike}
+  onOpenPhoto={(p) => setSelectedPhoto(p)}
+
 />
+{selectedPhoto && (
+  <PhotoLightbox
+    photo={selectedPhoto}
+    onClose={() => setSelectedPhoto(null)}
+    onPhotoUpdate={(photoId, patch) => {
+      //  aggiorna la griglia del profilo pubblico
+      setPhotos((prev) =>
+        (prev || []).map((ph) => (ph.id === photoId ? { ...ph, ...patch } : ph))
+      );
+
+      //  aggiorna il lightbox
+      setSelectedPhoto((cur) =>
+        cur && cur.id === photoId ? { ...cur, ...patch } : cur
+      );
+    }}
+  />
+)}
+
 
 
       {/* UPLOAD MODAL (solo se isMine) */}

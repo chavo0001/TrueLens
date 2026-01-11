@@ -1,5 +1,5 @@
 .mp-page {
-  padding: 24px 24px 60px;
+  padding: 0px 24px 60px;
 }
 
 .mp-container {
@@ -7,7 +7,7 @@
   margin: 0 auto;
 }
 
-/* Header card (Instagram-like) */
+/* Header card */
 .mp-header-card {
   display: grid;
   grid-template-columns: 140px 1fr;
@@ -61,7 +61,7 @@
   flex-wrap: wrap;
 }
 
-/* Buttons */
+/* Bottoni */
 .mp-btn {
   padding: 10px 14px;
   border-radius: 12px;

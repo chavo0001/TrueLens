@@ -24,8 +24,9 @@ const ProfileLayout = ({
   // likes
   onToggleLike = null,
 
-  // ✅ lightbox
+  // lightbox
   onOpenPhoto = null,
+  
 }) => {
   const navigate = useNavigate();
 
