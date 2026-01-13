@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { apiFetch } from "../api/apiFetch";
 import ProfileLayout from "./ProfileLayout";
 import PhotoLightbox from "./PhotoLightbox";
-
+import UploadPhotoModal from "./UploadPhotoModal";
 const UserProfile = () => {
   const { id } = useParams();
   const profileUserId = Number(id);
@@ -27,8 +27,6 @@ const UserProfile = () => {
 
   // Upload modal (solo se isMine)
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const fileRef = useRef(null);
   const [likesTotal, setLikesTotal] = useState(null);
   const [followersCount, setFollowersCount] = useState(null);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -129,43 +127,17 @@ const UserProfile = () => {
   // ---------- UPLOAD (modal) ----------
   const openUpload = () => setUploadOpen(true);
 
-  const closeUpload = () => {
-    setUploadOpen(false);
-    if (fileRef.current) fileRef.current.value = "";
-  };
-
-  const submitUpload = async () => {
-    const fileList = fileRef.current?.files;
-    if (!fileList || fileList.length === 0) return;
-
-    try {
-      setUploading(true);
-
-      const formData = new FormData();
-      Array.from(fileList).forEach((f) => formData.append("photos", f));
-
-      const res = await apiFetch("/api/me/photos", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Upload failed");
-      }
-
-      closeUpload();
-
+  {isMine && (
+  <UploadPhotoModal
+    open={uploadOpen}
+    onClose={() => setUploadOpen(false)}
+    onUploaded={async () => {
       const refreshed = await loadProfile();
       setUser(refreshed.user || null);
       setPhotos(refreshed.photos || []);
-    } catch (err) {
-      console.error(err);
-      alert(err.message || "Errore upload");
-    } finally {
-      setUploading(false);
-    }
-  };
+    }}
+  />
+)}
 
   // ---------- DELETE ----------
   const deletePhoto = async (photoId) => {
@@ -266,32 +238,6 @@ const UserProfile = () => {
   />
 )}
 
-
-
-      {/* UPLOAD MODAL (solo se isMine) */}
-      {isMine && uploadOpen && (
-        <div className="mp-modal-backdrop" onMouseDown={closeUpload}>
-          <div className="mp-modal" onMouseDown={(e) => e.stopPropagation()}>
-            <h3>Add photo</h3>
-            <div className="mp-modal-body">
-              <input ref={fileRef} type="file" accept="image/*" multiple />
-            </div>
-
-            <div className="mp-modal-actions">
-              <button className="mp-btn mp-btn-ghost" onClick={closeUpload}>
-                Cancel
-              </button>
-              <button
-                className="mp-btn mp-btn-primary"
-                onClick={submitUpload}
-                disabled={uploading}
-              >
-                {uploading ? "Uploading..." : "Upload"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* MODAL CONFERMA DELETE */}
       {confirmDelete && (

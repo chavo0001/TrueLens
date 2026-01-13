@@ -625,6 +625,7 @@ app.post(
   ]),
   async (req, res) => {
     const userId = req.user.id;
+    const caption = (req.body.caption || "").trim() || null;
 
     try {
       
@@ -685,17 +686,17 @@ const filePath = `/uploads/${finalFilename}`;
  
         // 1) Inserisci foto
         const r = await pool.query(
-          `INSERT INTO user_images (user_id, file_path)
-           VALUES ($1,$2)
-           RETURNING id, user_id, file_path, created_at`,
-          [userId, filePath]
+          `INSERT INTO user_images (user_id, file_path, caption)
+           VALUES ($1,$2,$3)
+           RETURNING id, user_id, file_path, caption, created_at`,
+          [userId, filePath, caption]
         );
 
         const photoRow = r.rows[0];
         inserted.push(photoRow);
 
         // 2) Estrai EXIF dal file fisico
-        
+
         let exif = null;
         try {
           exif = await exifr.parse(absPath, {
@@ -796,7 +797,7 @@ const filePath = `/uploads/${finalFilename}`;
 app.get("/api/me/photos", requireSession, async (req, res) => {
   try {
     const userId = req.user.id;
-
+    
     const photosRes = await pool.query(
       `
       SELECT
@@ -1299,27 +1300,35 @@ app.get("/api/explore/photos", async (req, res) => {
 
    const r = await pool.query(
   `
-  SELECT
-    ui.id,
-    ui.file_path,
-    ui.created_at,
-    u.id AS user_id,
-    u.username,
-    u.avatar,
-    COUNT(pl.id)::int AS "likesCount",
-    CASE
-      WHEN $3::int IS NULL THEN false
-      ELSE EXISTS (
-        SELECT 1 FROM photo_likes pl2
-        WHERE pl2.photo_id = ui.id AND pl2.user_id = $3
-      )
-    END AS "likedByMe"
-  FROM user_images ui
-  JOIN users u ON u.id = ui.user_id
-  LEFT JOIN photo_likes pl ON pl.photo_id = ui.id
-  GROUP BY ui.id, u.id, u.avatar
-  ORDER BY ui.created_at DESC
-  LIMIT $1 OFFSET $2
+SELECT
+  ui.id,
+  ui.file_path,
+  ui.created_at,
+  ui.caption,
+  u.id AS user_id,
+  u.username,
+  u.avatar,
+  COUNT(pl.id)::int AS "likesCount",
+  CASE
+    WHEN $3::int IS NULL THEN false
+    ELSE EXISTS (
+      SELECT 1 FROM photo_likes pl2
+      WHERE pl2.photo_id = ui.id AND pl2.user_id = $3
+    )
+  END AS "likedByMe"
+FROM user_images ui
+JOIN users u ON u.id = ui.user_id
+LEFT JOIN photo_likes pl ON pl.photo_id = ui.id
+GROUP BY
+  ui.id,
+  ui.file_path,
+  ui.created_at,
+  ui.caption,
+  u.id,
+  u.username,
+  u.avatar
+ORDER BY ui.created_at DESC
+LIMIT $1 OFFSET $2;
   `,
   [limit, offset, currentUserId]
 );

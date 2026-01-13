@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../api/apiFetch";
 import ProfileLayout from "./ProfileLayout";
 import PhotoLightbox from "./PhotoLightbox";
-
+import UploadPhotoModal from "./UploadPhotoModal";
 const MyProfile = () => {
   const navigate = useNavigate();
 
@@ -15,17 +15,15 @@ const MyProfile = () => {
 
   // Upload 
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const fileRef = useRef(null);
   const [followersCount, setFollowersCount] = useState(null);
-
+  
   // 3 puntini menu + cancellazione foto
   const [menuOpenFor, setMenuOpenFor] = useState(null); 
   const [confirmDelete, setConfirmDelete] = useState(null); 
   const [deleting, setDeleting] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const photos = useMemo(() => profile?.photos || [], [profile]);
-
+  
   // si chiude dropdown cliccando fuori
   useEffect(() => {
     function onDocClick(e) {
@@ -123,40 +121,6 @@ const MyProfile = () => {
   }, []);
 
   const openUpload = () => setUploadOpen(true);
-  const closeUpload = () => {
-    setUploadOpen(false);
-    if (fileRef.current) fileRef.current.value = "";
-  };
-
-  const submitUpload = async () => {
-    const file = fileRef.current?.files?.[0];
-    if (!file) return;
-
-    try {
-      setUploading(true);
-
-      const form = new FormData();
-      form.append("photo", file);
-
-      const res = await apiFetch("/api/me/photos", {
-        method: "POST",
-        body: form,
-      });
-
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        throw new Error(d.error || "Upload failed");
-      }
-
-      closeUpload();
-      await refresh();
-    } catch (err) {
-      console.error(err);
-      alert(err.message || "Errore upload");
-    } finally {
-      setUploading(false);
-    }
-  };
 
   const requestDelete = (photo) => {
     setMenuOpenFor(null);
@@ -280,30 +244,13 @@ const MyProfile = () => {
     }}
   />
 )}
-      {/* UPLOAD MODAL */}
-      {uploadOpen && (
-        <div className="mp-modal-backdrop" onMouseDown={closeUpload}>
-          <div className="mp-modal" onMouseDown={(e) => e.stopPropagation()}>
-            <h3>Add photo</h3>
-            <div className="mp-modal-body">
-              <input ref={fileRef} type="file" accept="image/*" />
-            </div>
 
-            <div className="mp-modal-actions">
-              <button className="mp-btn mp-btn-ghost" onClick={closeUpload}>
-                Cancel
-              </button>
-              <button
-                className="mp-btn mp-btn-primary"
-                onClick={submitUpload}
-                disabled={uploading}
-              >
-                {uploading ? "Uploading..." : "Upload"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+ {/* UPLOAD MODAL */}
+   <UploadPhotoModal
+  open={uploadOpen}
+  onClose={() => setUploadOpen(false)}
+  onUploaded={refresh}
+/>
 
       {/* DELETE CONFIRM MODAL */}
       {confirmDelete && (
@@ -337,4 +284,4 @@ const MyProfile = () => {
   );
 };
 
-export default MyProfile;
+export default MyProfile; 
