@@ -726,22 +726,34 @@ const filePath = `/uploads/${finalFilename}`;
 
         // 3) Salva EXIF (solo se c'è qualcosa di utile)
        if (exif) {
-  const width = exif.ExifImageWidth ?? exif.ImageWidth ?? exif.Width ?? null;
-  const height = exif.ExifImageHeight ?? exif.ImageHeight ?? exif.Height ?? null;
+const make =
+  exif.Make ?? exif.make ?? exif["Image Make"] ?? exif["Make"] ?? null;
 
-  const payload = {
-    camera_make: exif.Make ?? null,
-    camera_model: exif.Model ?? null,
-    lens_model: exif.LensModel ?? null,
+const model =
+  exif.Model ?? exif.model ?? exif["Image Model"] ?? exif["Model"] ?? null;
 
-    f_number: toNumberOrNull(exif.FNumber),
-    exposure_time: formatExposureTime(exif.ExposureTime),
-    iso: exif.ISO ?? null,
-    focal_length_mm: toNumberOrNull(exif.FocalLength),
+// iPhone spesso non ha LensModel: va bene così
+const lens =
+  exif.LensModel ?? exif.lensModel ?? exif["Lens Model"] ?? null;
 
-    width_px: width ? Number(width) : null,
-    height_px: height ? Number(height) : null,
-  };
+const width = exif.ExifImageWidth ?? exif.ImageWidth ?? exif.Width ?? null;
+
+const height = exif.ExifImageHeight ?? exif.ImageHeight ?? exif.Height ?? null;
+
+const payload = {
+  camera_make: make,
+  camera_model: model,
+  lens_model: lens,
+
+  f_number: toNumberOrNull(exif.FNumber ?? exif.fNumber),
+  exposure_time: formatExposureTime(exif.ExposureTime ?? exif.exposureTime),
+  iso: exif.ISO ?? exif.iso ?? null,
+  focal_length_mm: toNumberOrNull(exif.FocalLength ?? exif.focalLength),
+
+  width_px: width ? Number(width) : null,
+  height_px: height ? Number(height) : null,
+};
+
 
   const hasAnyExif = Object.values(payload).some(
     (v) => v !== null && v !== undefined && v !== ""
@@ -804,6 +816,7 @@ app.get("/api/me/photos", requireSession, async (req, res) => {
         ui.id,
         ui.file_path,
         ui.created_at,
+        ui.caption,
         COUNT(pl.id)::int AS "likesCount",
         EXISTS (
           SELECT 1 FROM photo_likes pl2
@@ -812,7 +825,7 @@ app.get("/api/me/photos", requireSession, async (req, res) => {
       FROM user_images ui
       LEFT JOIN photo_likes pl ON pl.photo_id = ui.id
       WHERE ui.user_id = $1
-      GROUP BY ui.id
+      GROUP BY ui.id, ui.caption
       ORDER BY ui.created_at DESC
       `,
       [userId]
@@ -1256,6 +1269,7 @@ app.get("/api/users/:id", async (req, res) => {
     ui.id,
     ui.user_id,
     ui.file_path,
+    ui.caption,
     ui.created_at,
     COUNT(pl.id)::int AS "likesCount",
     CASE
@@ -1270,7 +1284,7 @@ app.get("/api/users/:id", async (req, res) => {
   FROM user_images ui
   LEFT JOIN photo_likes pl ON pl.photo_id = ui.id
   WHERE ui.user_id = $1
-  GROUP BY ui.id
+  GROUP BY ui.id, ui.caption
   ORDER BY ui.created_at DESC
   `,
   [userId, currentUserId]

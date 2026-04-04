@@ -196,3 +196,32 @@
   text-align: right;
   word-break: break-word;
 }
+
+
+.tl-shot-caption {
+  margin-top: 25px;
+  padding: 12px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tl-shot-caption-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: rgba(255, 255, 255, 0.65);
+  margin-bottom: 6px;
+}
+
+.tl-shot-caption-text {
+  font-size: 14px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.92);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.tl-shot-caption-empty .tl-shot-caption-text {
+  color: rgba(255, 255, 255, 0.45);
+}

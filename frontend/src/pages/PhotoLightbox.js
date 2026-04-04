@@ -109,13 +109,23 @@ const PhotoLightbox = ({ photo, onClose, onPhotoUpdate }) => {
   const formatISO = (v) => (v ? `ISO ${Number(v)}` : "—");
   const formatExposure = (v) => (v ? String(v) : "—");
 
-  const hasAnyExif =
-    exif &&
-    Object.values(exif).some((v) => v !== null && v !== undefined && v !== "");
+    const hasDevice = !!(exif?.camera_make || exif?.camera_model);
 
-  const cameraText = exif
+    const hasAnyExif = !!(
+    hasDevice ||
+    exif?.lens_model ||
+    exif?.width_px ||
+    exif?.height_px ||
+    exif?.f_number ||
+    exif?.exposure_time ||
+    exif?.iso ||
+    exif?.focal_length_mm
+    );
+
+    const cameraText = exif
     ? [exif.camera_make, exif.camera_model].filter(Boolean).join(" ")
     : "";
+
 
   return (
     <div className="tl-lightbox" onMouseDown={onClose}>
@@ -132,52 +142,73 @@ const PhotoLightbox = ({ photo, onClose, onPhotoUpdate }) => {
               src={imgSrc}
               alt={photo?.username || "photo"}
             />
-          </div>
+            </div>
+            <aside
+                className="tl-lightbox-info"
+                onMouseDown={(e) => e.stopPropagation()}
+            >
+                <div className="tl-info-title">Shot Details</div>
 
-          <aside
-            className="tl-lightbox-info"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <div className="tl-info-title">Shot Details</div>
-
-            {exifLoading ? (
-              <div className="tl-info-muted">Loading EXIF...</div>
-            ) : !hasAnyExif ? (
-              <div className="tl-info-muted">EXIF not visible</div>
-            ) : (
-              <div className="tl-info-list">
-                <div className="tl-info-row">
-                  <span>Camera</span>
-                  <span>{cameraText || "—"}</span>
+                {exifLoading ? (
+                <div className="tl-info-muted">Loading EXIF...</div>
+                ) : !hasAnyExif ? (
+                <div className="tl-info-muted">EXIF not available</div>
+                ) : (
+                <div className="tl-info-list">
+                    <div className="tl-info-row">
+                <span>Camera</span>
+                <span>{cameraText || "—"}</span>
                 </div>
 
+                {exif?.lens_model ? (
                 <div className="tl-info-row">
-                  <span>Lens</span>
-                  <span>{exif.lens_model || "—"}</span>
+                    <span>Lens</span>
+                    <span>{exif.lens_model}</span>
                 </div>
+                ) : null}
 
+                {exif?.f_number ? (
                 <div className="tl-info-row">
-                  <span>Aperture</span>
-                  <span>{formatFNumber(exif.f_number)}</span>
+                    <span>Aperture</span>
+                    <span>{formatFNumber(exif.f_number)}</span>
                 </div>
+                ) : null}
 
+                {exif?.exposure_time ? (
                 <div className="tl-info-row">
-                  <span>Shutter Speed</span>
-                  <span>{formatExposure(exif.exposure_time)}</span>
+                    <span>Shutter Speed</span>
+                    <span>{formatExposure(exif.exposure_time)}</span>
                 </div>
+                ) : null}
 
+                {exif?.iso ? (
                 <div className="tl-info-row">
-                  <span>ISO</span>
-                  <span>{formatISO(exif.iso)}</span>
+                    <span>ISO</span>
+                    <span>{formatISO(exif.iso)}</span>
                 </div>
+                ) : null}
 
+                {exif?.focal_length_mm ? (
                 <div className="tl-info-row">
-                  <span>Focal lenght</span>
-                  <span>{formatFocal(exif.focal_length_mm)}</span>
+                    <span>Focal length</span>
+                    <span>{formatFocal(exif.focal_length_mm)}</span>
                 </div>
+                ) : null}
 
-              </div>
-            )}
+                </div>
+                )}
+
+            {photo?.caption ? (
+  <div className="tl-shot-caption">
+    <div className="tl-shot-caption-label">Caption</div>
+    <div className="tl-shot-caption-text">{photo.caption}</div>
+  </div>
+) : (
+  <div className="tl-shot-caption tl-shot-caption-empty">
+    <div className="tl-shot-caption-label">Caption</div>
+    <div className="tl-shot-caption-text">—</div>
+  </div>
+    )}
           </aside>
         </div>
 
